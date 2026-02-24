@@ -126,7 +126,7 @@ for (i in 1:nrow(meta)) {
       quelle            = metadatazeile$quelle,
       kartierungsumfang = metadatazeile$kartierungsumfang
     )
-  cat("... und56 ins lange Format formatiert.\n")
+  cat("... und ins lange Format formatiert.\n")
   if (i == 1) {
     data <- ds
     cat(" dataframe namens data geschaffen; hat",nrow(data),"Zeilen.\n")
@@ -192,10 +192,9 @@ gv_gemeinden <- pfad_gv_datei %>%
 
 ```
 
-und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung" extrahiert.
-Ein Auszug daraus findet sich in @tbl-gemeindeverzeichnis.
+und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung" extrahiert. Ein Auszug daraus findet sich in @tbl-gemeindeverzeichnis.
 
-```{r}
+```{r tabelle_gemeindeverzeichnis}
 #| label: tbl-gemeindeverzeichnis
 #| tbl-cap: "Ein Auszug aus dem so gewonnenen Gemeindeverzeichnis"
 #| tbl-colwidths: [60,40]
@@ -210,6 +209,56 @@ Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt.
 data <- data %>%
   left_join(gv_gemeinden, by = "gemeinde_kennziffer")
 
+```
+
+## Statistische Übersicht
+
+Bisher eingelesen wurden folgende Expositionsdaten:
+
+
+```{r tabelle_expositionestatistik}
+#| label: tbl-expositionestatistik
+#| tbl-cap: "Deskriptive Auswertung der bisher eingelesenen Expositionsdaten"
+#| tbl-colwidths: [60,40]
+
+data %>%
+  group_by(gemeinde_kennziffer,
+           bundesland_code,
+           quelle,
+           metrik,
+           kartierungsumfang) %>%
+  summarise(exponierte = sum(exponierte)) %>%
+  group_by(bundesland_code, quelle, metrik, kartierungsumfang) %>%
+  summarise(exponierteGesamt = sum(exponierte),
+            AnzKartierteGemeinden = n()) %>%
+  pivot_wider(
+    names_from = kartierungsumfang,
+    values_from = c(exponierteGesamt, AnzKartierteGemeinden)
+  )%>%
+  ungroup %>% 
+  complete(bundesland_code, quelle, metrik) %>% 
+  knitr::kable()
+
+```
+
+
+
+```{r expositions_statistik}
+data %>%
+  group_by(gemeinde_kennziffer,
+           bundesland_code,
+           quelle,
+           metrik,
+           kartierungsumfang) %>%
+  summarise(exponierte = sum(exponierte)) %>%
+  group_by(bundesland_code, quelle, metrik, kartierungsumfang) %>%
+  summarise(exponierteGesamt = sum(exponierte),
+            AnzKartierteGemeinden = n()) %>%
+  pivot_wider(
+    names_from = kartierungsumfang,
+    values_from = c(exponierteGesamt, AnzKartierteGemeinden)
+  ) %>%
+  knitr::kable()
 ```
 
 ## GIS-Übersicht
@@ -258,7 +307,6 @@ blubb %>%
 
 ```
 
-
 ## Expositionsdaten räumlich visualisieren
 
 ```{r gis_expositionsdaten_visualisieren}
@@ -295,7 +343,6 @@ data_sf %>%
   select(gemeinde_kennziffer,GEN,bevoelkerung,belastete)
 
 ```
-
 
 ## Statistiken über eingelesene Daten
 
