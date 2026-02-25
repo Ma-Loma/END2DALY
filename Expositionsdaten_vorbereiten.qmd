@@ -68,11 +68,12 @@ meta %>%
   knitr::kable()
 ```
 
-## Verarbeitung
+## Verarbeitung Expositionsdaten
 
-Entlang dieser Metadaten werden nun die Rohdaten eingelesen, gefiltert und gleich in ein gut weiterverarbeitbares "long format" transformiert.
+Entlang dieser Metadaten werden nun die bereitgestellten Expositionstabellen eingelesen, gefiltert und in ein gut weiterverarbeitbares "long format" transformiert.
 
 ```{r einlesen_verarbeiten}
+#| include: false
 
 read_one_dataset <- function(meta_row) {
   col_names <- read_colnames(meta_row$spaltennamen)
@@ -260,7 +261,9 @@ Ich lade hier die [GIS-Daten der Gemeinden](https://daten.gdz.bkg.bund.de/produk
 
 ```{r vg250_laden}
 
-vg250 <- st_read("./data/GISDaten/DE_VG250.gpkg") %>% 
+st_layers("./data/GISDaten/DE_VG250.gpkg")
+
+vg250 <- st_read("./data/GISDaten/DE_VG250.gpkg",layer = "vg250_gem") %>% 
   filter(GF==4) %>% # nur Landflächen, nicht Wasserflächen ...
   #filter(SN_G != "000") %>%
   mutate(
@@ -271,21 +274,25 @@ vg250 <- st_read("./data/GISDaten/DE_VG250.gpkg") %>%
     #   str_pad(SN_R, 1, pad = "0"),
     #   str_pad(SN_K, 2, pad = "0"),
     #   str_pad(SN_V2, 3, pad = "0"))
-  )%>%
-  group_by(gemeinde_kennziffer) %>%
-  summarise(
-    GEN = first(GEN),
-    .groups = "drop"
   )
+# %>%
+#   group_by(gemeinde_kennziffer) %>%
+#   summarise(
+#     GEN = first(GEN),
+#     .groups = "drop"
+#   )
 
 ggplot(vg250) +
-  geom_sf(aes(geometry=geom), fill = "grey")
+  geom_sf(aes(geometry=geom,fill=WSK),linewidth=0.1)#, fill = "grey"
 
 
 stopifnot(all(nchar(vg250$gemeinde_kennziffer) == 8))
 
 bla<-vg250 %>% 
   st_drop_geometry()
+bla %>% 
+  filter(gemeinde_kennziffer!=AGS)
+
 ```
 
 ```{r gis_visualisierung_vg250}
