@@ -82,9 +82,11 @@ read_one_dataset <- function(meta_row) {
     sheet = meta_row$tabellenblatt,
     skip  = meta_row$zeilen_weglassen,
     n_max = meta_row$zeilen_gesamt,
-    col_names = col_names
+    col_names = col_names,
+    na=c("","NA","Information not provided","No data","Not applicable")
   ) %>%
-    mutate(geoschluessel_stellen = meta_row$geoschluessel_stellen)
+    mutate(geoschluessel_stellen = meta_row$geoschluessel_stellen,
+           datenquelle = meta_row$datenquelle)
 }
 ## Expositionsdaten schön machen
 
@@ -113,27 +115,44 @@ lang_machen <- function(data) {
     #          ))
 }
 
-
 for (i in 1:nrow(meta)) {
   metadatazeile <- meta[i, ]
-  cat("Lese ",paste(metadatazeile),", Sheet",metadatazeile$tabellenblatt,"....\n")
-  ds <- read_one_dataset(metadatazeile) %>% 
-    mutate(gemeinde_kennziffer=as.character(gemeinde_kennziffer))
-  cat("Habe",nrow(ds)," Zeilen gelesen.")
-  ds<-ds %>%
+  cat("Lese ",
+      paste(metadatazeile),
+      ", Sheet",
+      metadatazeile$tabellenblatt,
+      "....\n")
+  ds <- read_one_dataset(metadatazeile)
+    if ("country" %in% names(ds)){
+      ds<-ds %>% 
+        filter(country=="Germany")
+    } 
+  ds<-ds%>%
+    mutate(gemeinde_kennziffer = if ("gemeinde_kennziffer" %in% names(.))
+      as.character(gemeinde_kennziffer)
+      else
+        NA_character_)
+    #mutate(gemeinde_kennziffer=as.character(gemeinde_kennziffer))
+  cat("Habe", nrow(ds), " Zeilen gelesen.")
+  ds <- ds %>%
     lang_machen() %>%
     mutate(
       bundesland_code        = metadatazeile$bundesland_code,
       quelle            = metadatazeile$quelle,
-      kartierungsumfang = metadatazeile$kartierungsumfang
+      kartierungsumfang = metadatazeile$kartierungsumfang,
+      datenquelle = metadatazeile$datenquelle
     )
   cat("... und ins lange Format formatiert.\n")
   if (i == 1) {
     data <- ds
-    cat(" dataframe namens data geschaffen; hat",nrow(data),"Zeilen.\n")
+    cat(" dataframe namens data geschaffen; hat",
+        nrow(data),
+        "Zeilen.\n")
   } else {
     data <- bind_rows(data, ds)
-    cat(" und angehängt. Insgesamt sind es jetzt",nrow(data),"Zeilen.\n")
+    cat(" und angehängt. Insgesamt sind es jetzt",
+        nrow(data),
+        "Zeilen.\n")
   }
   
 }
