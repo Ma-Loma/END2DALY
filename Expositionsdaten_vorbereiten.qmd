@@ -54,7 +54,7 @@ read_colnames <- function(path) {
 
 und in @tbl-metadaten dargestellt.
 
-```{r metadatentabelle}
+```{r}
 #| label: tbl-metadaten
 #| tbl-cap: "Die Metadaten, mit Hilfe derer die Expositionsdaten eingelesen werden"
 #| tbl-colwidths: [60,40]
@@ -229,7 +229,7 @@ gv_gemeinden <- pfad_gv_datei %>%
 
 und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung" extrahiert. Ein Auszug daraus findet sich in @tbl-gemeindeverzeichnis.
 
-```{r tabelle_gemeindeverzeichnis}
+```{r}
 #| label: tbl-gemeindeverzeichnis
 #| tbl-cap: "Ein Auszug aus dem so gewonnenen Gemeindeverzeichnis"
 #| tbl-colwidths: [60,40]
@@ -299,6 +299,7 @@ dataOut <-
 ```
 
 ```{r datenexport}
+#| message: false
 cleanOutPath<-"data/Expositionsdaten/sauber/"
 
 dataOut %>% 
@@ -311,7 +312,7 @@ dataOut %>%
 
 Bisher eingelesen wurden die in @tbl-expositionsstatistik zusammengefassten Expositionsdaten
 
-```{r tabelle_expositionsstatistik}
+```{r}
 #| label: tbl-expositionsstatistik
 #| tbl-cap: "Deskriptive Auswertung der bisher eingelesenen Expositionsdaten"
 #| tbl-colwidths: [60,40]
@@ -385,45 +386,53 @@ vg250 <- st_read("./data/Gebietstabellen/DE_VG250.gpkg", layer = "vg250_gem") %>
 
 ggplot(vg250) +
   geom_sf(aes(geometry=geom,fill=paste(BEM,BEZ)),color=NA)+
-  scale_fill_discrete(name="Art der Gemeinde")
+  scale_fill_discrete(name="Art der Gemeinde")+
+  theme_void()
+```
 
-bla<-vg250 %>% 
-  st_drop_geometry()
+Statistik über die Gemeinden in Deutschland:
 
-bla %>% 
+```{r vg250_gemeindestatistik}
+vg250 %>% 
+  st_drop_geometry() %>% 
   group_by(BEM,BEZ) %>% 
-  summarise(n=n())
+  summarise(n=n()) %>% 
+  knitr::kable()
 
 ```
 
-```{r gis_visualisierung_vg250}
-blubb <- vg250 %>%
-  left_join(gv_gemeinden, by = join_by(AGS==gemeinde_kennziffer))
+In den Gemeinden gibt es folgende Dubletten:
 
-blubb %>%
+```{r dubletten}
+vg250 %>%
+  st_drop_geometry() %>%
+  count(AGS) %>%
+  filter(n > 1)
+```
+
+
+Zusammen mit den Informationen aus der oben genannten Tabelle "gv_gemeinden" lässt sich beispielsweise eine Bevölkerungdichtekarte darstellen:
+
+```{r gis_visualisierung_vg250}
+vg250 %>%
+  left_join(gv_gemeinden, by = join_by(AGS==gemeinde_kennziffer)) %>% 
   ggplot() +
   geom_sf(aes(fill = bevoelkerung/flaeche,geometry=geom), color = NA) +
   scale_fill_viridis_c(option="A",direction = -1) +
   theme_minimal()+
-  labs(fill="Bevölkerungsdichte")
+  labs(fill="Bevölkerungsdichte")+
+  theme_void()
 
 ```
 
 ## Expositionsdaten räumlich visualisieren
 
+Am Beispiel von Hessen wird der Umfang der Expositionsinformationen der verschiedenen Datenquellen visualiert:
+
 ```{r gis_expositionsdaten_visualisieren}
-
-
-# Gibt es Dubletten?
-vg250 %>%
-  st_drop_geometry() %>%
-  count(AGS) %>%
-  filter(n > 1)
-
-
-data_sf <- data  %>%
+data_sf <- dataOut  %>%
   filter(bundesland_code=="06") %>% 
-  group_by(gemeinde_kennziffer,quelle,metrik,kartierungsumfang) %>%
+  group_by(gemeinde_kennziffer,quelle,metrik,kartierungsumfang,datenquelle) %>%
   summarise(
     name_stadt_gemeinde = first(name_stadt_gemeinde),
     bevoelkerung = max(bevoelkerung, na.rm = FALSE),
@@ -434,33 +443,11 @@ data_sf <- data  %>%
 ```
 
 ```{r gis_expositionsdaten_plotten}
-
 ggplot(data_sf) +
   geom_sf(aes(fill = belastete/bevoelkerung,geometry=geom), color = NA) +
   scale_fill_viridis_c(na.value = "grey90") +
-  theme_minimal()+facet_grid(cols=vars(quelle,kartierungsumfang),rows=vars(metrik))
-
-
-
-
-data_sf %>% 
-  select(gemeinde_kennziffer,GEN,bevoelkerung,belastete)
-
-```
-
-## Statistiken über eingelesene Daten
-
-Hier eine Statistik
-
-```{r statistiken}
-
-anzahl_expositionen<-data %>% 
-  group_by(name_stadt_gemeinde,quelle, kartierungsumfang, metrik) %>% 
-  summarise(total_exponierte = sum(exponierte),Anzahl_Pegelbaender=n())
-
-anzahl_expositionen %>%
-  ungroup() %>% 
-  slice_sample(n=5) %>% 
-  flextable::qflextable()
+  facet_grid(cols=vars(quelle,kartierungsumfang),
+                             rows=vars(datenquelle,metrik))+
+  theme_void()
 
 ```
