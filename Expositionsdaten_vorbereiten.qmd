@@ -222,6 +222,7 @@ gv_gemeinden <- pfad_gv_datei %>%
       "67" ~ "große Kreisstadt"
     )
   ) %>%
+  mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) %>%
   select(-., -satzart)
 
 ```
@@ -249,7 +250,7 @@ dataMitGKZ <- data %>%
 
 Für den Teil ohne Gemeindekennziffer muss zunächst der Gemeindename einheitlich gepflegt werden
 
-```{r gemeindedaten_ohne_GKZ}
+```{r gemeindedaten_GKZ_nachpflegen}
 ersetzungen <-
   c(
     "oe" = "ö",
@@ -270,25 +271,41 @@ uebersetzungen <- c(
   "Oldenburg" = "Oldenburg (Oldb)"
 )
 
-
 dataEEA <- data %>%
   filter(datenquelle == "EEA") %>%
   mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,ersetzungen)) %>%
   mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,uebersetzungen)) %>%
-  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,"Mörs","Moers"))
+  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,"Mörs","Moers")) %>% 
+  select(-gemeinde_kennziffer,-geoschluessel_stellen)
 
-deutsch <- gv_gemeinden %>%
+EEArelevantGv <- gv_gemeinden %>%
   filter(str_detect(gemeinde_kennzeichnung, "tadt")) %>%
-  mutate(gemeinde_bezeichnung =   #alles was nach dem Komma steht ignorieren
+  mutate(name_stadt_gemeinde =   #alles was nach dem Komma steht ignorieren
            str_split_fixed(gemeinde_bezeichnung, ",", 2)[, 1]) %>%
-  mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) %>% 
-  select()
+  mutate(name_stadt_gemeinde = str_squish(name_stadt_gemeinde))
 
-intersect(engl, deutsch)
-setdiff(engl, deutsch)
+dataEEAMitGKZ <- EEArelevantGv %>%
+  right_join(dataEEA, by = join_by(name_stadt_gemeinde)) %>%
+  mutate(geoschluessel_stellen = str_length(gemeinde_kennziffer)) %>%
+  mutate(bundesland_code = str_sub(gemeinde_kennziffer, 1, 2))
 
-deutsch
+dataEEAMitGKZ %>%
+  filter(is.na(gemeinde_kennziffer)) %>%
+  select(name_stadt_gemeinde) %>%
+  unique()
+
+dataOut <-
+  bind_rows(dataMitGKZ, dataEEAMitGKZ)
 ```
+
+```{r datenexport}
+cleanOutPath<-"data/Expositionsdaten/sauber/"
+
+dataOut %>% 
+  write_excel_csv2(paste0(cleanOutPath,"allExpo.csv"))
+
+```
+
 
 ## Statistische Übersicht
 
@@ -299,24 +316,53 @@ Bisher eingelesen wurden die in @tbl-expositionsstatistik zusammengefassten Expo
 #| tbl-cap: "Deskriptive Auswertung der bisher eingelesenen Expositionsdaten"
 #| tbl-colwidths: [60,40]
 
-data %>%
-  group_by(gemeinde_kennziffer,
+expoTab <-
+  dataOut %>%
+  group_by(
+    datenquelle,
+    gemeinde_kennziffer,
+    bundesland_code,
+    quelle,
+    metrik,
+    kartierungsumfang
+  ) %>%
+  summarise(exponierte = sum(exponierte),
+            bevoelkerung = first(bevoelkerung)) %>%
+  group_by(datenquelle,
            bundesland_code,
            quelle,
            metrik,
            kartierungsumfang) %>%
-  summarise(exponierte = sum(exponierte)) %>%
-  group_by(bundesland_code, quelle, metrik, kartierungsumfang) %>%
-  summarise(exponierteGesamt = sum(exponierte),
-            AnzKartierteGemeinden = n()) %>%
+  summarise(
+    exponierteGesamt = sum(exponierte),
+    AnzKartierteGemeinden = n(),
+    bevoelkerung = sum(bevoelkerung)
+  ) %>%
   pivot_wider(
     names_from = kartierungsumfang,
     values_from = c(exponierteGesamt, AnzKartierteGemeinden)
-  )%>%
-  ungroup %>% 
-  complete(bundesland_code, quelle, metrik) %>% 
+  ) %>%
+  ungroup 
+expoTab%>%
+  #  complete(bundesland_code, quelle, metrik) %>%
   knitr::kable()
 
+expoTab %>% 
+  left_join(bundesland_daten) %>% 
+  select(-bundesland_nummer,-bundesland_code) %>% 
+  write_excel_csv2(paste0(cleanOutPath,"Expositionstabelle.csv"))
+
+
+expoTab %>% 
+  filter(datenquelle=="EEA") %>% 
+  group_by(quelle,metrik) %>% 
+  summarise(bevoelkerung=sum(bevoelkerung),
+            exponierteGesamt_major=sum(exponierteGesamt_major),
+            exponierteGesamt_all=sum(exponierteGesamt_all),
+            AnzKartierteGemeinden_major=sum(AnzKartierteGemeinden_major),
+            AnzKartierteGemeinden_all=sum(AnzKartierteGemeinden_all),
+            ) %>% 
+  write_excel_csv2(paste0(cleanOutPath,"Expositionszusammenfassung.csv"))
 ```
 
 ## GIS-Übersicht
