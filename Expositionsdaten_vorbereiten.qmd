@@ -303,6 +303,13 @@ dataOut <-
 cleanOutPath<-"data/Expositionsdaten/sauber/"
 
 dataOut %>% 
+  select(-name_stadt_gemeinde,
+         -geoschluessel_stellen,
+         -bundesland_code,
+         -gemeinde_bezeichnung,
+         -gemeinde_kennzeichnung,
+         -bevoelkerung,
+         -flaeche) %>% 
   write_excel_csv2(paste0(cleanOutPath,"allExpo.csv"))
 
 ```
