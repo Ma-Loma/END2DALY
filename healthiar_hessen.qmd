@@ -80,11 +80,11 @@ calc_kreis_ar_impact <- function(dat) {
     {
       healthiar::attribute_health(
         approach_risk = "absolute_risk",
-        pop_exp = .$population,
-        exp_central = .$L_central,
+        pop_exp = .$exponierte,
+        exp_central = .$l_zentral,
         cutoff_central = first(.$threshold),
         erf_eq_central = first(.$ERF),
-        geo_id_micro = .$gemeinde_bezeichung,
+        geo_id_micro = .$gemeinde_bezeichnung,
         geo_id_macro = .$Kreis_Name,
         dw_central = .$DW,
         duration_central = 1
@@ -129,13 +129,13 @@ dat_exp_ERF <- allExpo_w %>%
 Hier beispielshaft für einige Gesundheitsauswirkungen: HA, HSD, Leseverständnis.
 
 ```{r health-impacts-road-air}
-HA_road_res <- allExpo_w %>%
-  filter(quelle == "road", metrik == "lden", outcome == "High noise annoyance") %>%
+HA_road_res <- dat_exp_ERF %>%
+  filter(source == "road", metric == "lden", outcome == "High noise annoyance") %>%
   calc_kreis_ar_impact(.)
 
 # Straßenlärm: Hohe Schlafstörung
 HSD_road_res <- dat_exp_ERF %>%
-  filter(quelle == "road", metrik == "lnight", outcome == "High sleep disturbance") %>%
+  filter(source == "road", metric == "lnight", outcome == "High sleep disturbance") %>%
   calc_kreis_ar_impact(.)
 
 # Fluglärm: Hohe Lärmbelästigung
@@ -161,10 +161,11 @@ Lärmbelastung in Hessen nach Kreisen
 ```{r plot-exposure-hessen}
 dir.create("plots", showWarnings = F)
 
-dat_l %>%
-  ggplot(aes(x = L_Untergrenze, y = population, fill = name_kreis)) +
+allExpo_w %>%
+  filter(Bundesland_Code=="06") %>% 
+  ggplot(aes(x = l_untergrenze, y = exponierte, fill = Kreis_Name)) +
   geom_col() +
-  facet_grid(metric ~ source) +
+  facet_grid(rows=vars(metrik),cols=vars(datenquelle,quelle,kartierungsumfang)) +
   labs(
     title = "Lärmbelastung in Hessen nach Kreisen, Quelle und Lärmmetrik",
     x = "Lärmpegel in dB",
