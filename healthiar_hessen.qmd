@@ -84,8 +84,8 @@ calc_kreis_ar_impact <- function(dat) {
         exp_central = .$L_central,
         cutoff_central = first(.$threshold),
         erf_eq_central = first(.$ERF),
-        geo_id_micro = .$name_stadt_gemeinde,
-        geo_id_macro = .$name_kreis,
+        geo_id_micro = .$gemeinde_bezeichung,
+        geo_id_macro = .$Kreis_Name,
         dw_central = .$DW,
         duration_central = 1
       )
@@ -105,8 +105,22 @@ calc_kreis_ar_impact <- function(dat) {
 ## Expositionsdaten und ERF-Funktionen zusammenführen
 
 ```{r merge-exposure-erf}
-dat_exp_ERF <- dat_l %>%
-  left_join(functionsETCHE, by = c("source", "metric"), relationship = "many-to-many") %>%
+dat_exp_ERF <- allExpo_w %>%
+  mutate(
+    source =
+      case_match(
+        quelle,
+        "Straße" ~ "road",
+        "Flug" ~ "air",
+        "Industrie" ~ "industry",
+        "Schiene" ~ "rail"
+      ),
+    metric = metrik,
+    .keep = "unused"
+  ) %>%
+  left_join(functionsETCHE,
+            by = join_by(source, metric),
+            relationship = "many-to-many") %>%
   mutate(threshold = replace_na(threshold, 0))
 ```
 
@@ -115,13 +129,13 @@ dat_exp_ERF <- dat_l %>%
 Hier beispielshaft für einige Gesundheitsauswirkungen: HA, HSD, Leseverständnis.
 
 ```{r health-impacts-road-air}
-HA_road_res <- dat_exp_ERF %>%
-  filter(source == "road", metric == "lden", outcome == "High noise annoyance") %>%
+HA_road_res <- allExpo_w %>%
+  filter(quelle == "road", metrik == "lden", outcome == "High noise annoyance") %>%
   calc_kreis_ar_impact(.)
 
 # Straßenlärm: Hohe Schlafstörung
 HSD_road_res <- dat_exp_ERF %>%
-  filter(source == "road", metric == "lnight", outcome == "High sleep disturbance") %>%
+  filter(quelle == "road", metrik == "lnight", outcome == "High sleep disturbance") %>%
   calc_kreis_ar_impact(.)
 
 # Fluglärm: Hohe Lärmbelästigung
