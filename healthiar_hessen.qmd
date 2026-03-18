@@ -198,31 +198,6 @@ datBundesland_major <- dat_exp_ERF %>%
          kartierungsumfang == "major")
 
 resBundesland_major<-all_ar_res(datBundesland_major)
-
-HA_road_res <- dat_exp_ERF %>%
-  filter(source == "road", metric == "lden", outcome == "High noise annoyance") %>%
-  calc_macro_ar_impact(.)
-
-# Straßenlärm: Hohe Schlafstörung
-HSD_road_res <- dat_exp_ERF %>%
-  filter(source == "road", metric == "lnight", outcome == "High sleep disturbance") %>%
-  calc_macro_ar_impact(.)
-
-# Fluglärm: Hohe Lärmbelästigung
-HA_air_res <- dat_exp_ERF %>%
-  filter(source == "air", metric == "lden", outcome == "High noise annoyance") %>%
-  calc_macro_ar_impact(.)
-
-# Fluglärm: Hohe Schlafstörung
-HSD_air_res <- dat_exp_ERF %>%
-  filter(source == "air", metric == "lnight", outcome == "High sleep disturbance") %>%
-  calc_macro_ar_impact(.)
-
-# Fluglärm: Leseverständnis
-Reading_air_res <- dat_exp_ERF %>%
-  filter(source == "air", metric == "lden", outcome == "Reading Comprehension") %>%
-  calc_macro_ar_impact(.)
-
 ```
 
 ## Visualisierungen
@@ -243,6 +218,7 @@ allExpo_w %>%
     y = "Anzahl exponierter Personen"
   ) +
   guides(fill = guide_legend(title = "Kreis"))
+
 ggsave("plots/exposition_hessen.png", width = 12, height = 8)
 ```
 
@@ -253,28 +229,32 @@ bundesland_daten <- read_delim("data/Gebietstabellen/bundesland_daten.csv",
     delim = ";", escape_double = FALSE, col_types = cols(bundesland_code = col_character()), 
     trim_ws = TRUE)
 
-outcome_all <- HA_road_res %>%
-  bind_rows(HSD_road_res) %>%
-  bind_rows(HA_air_res) %>%
-  bind_rows(HSD_air_res) %>%
-  bind_rows(Reading_air_res)
-
 kagzrm_kreise <- c("Darmstadt-Dieburg", "Groß-Gerau", "Main-Taunus-Kreis", "Offenbach")
 
-resBundesland_major %>% 
+resEEA_all %>% 
   left_join(bundesland_daten,by=join_by(geo_id_macro==bundesland_code)) %>% 
-# outcome_all %>%
 #   filter(geo_id_macro %in% kagzrm_kreise) %>%
-  ggplot(aes(x = source, fill = bundesland_name, y = impact)) +
+  ggplot(aes(x = outcome, fill = bundesland_name, y = impact)) +
   geom_col() +
-  facet_grid(rows=vars(metric,outcome),cols=vars(kartierungsumfang)) +
-  #facet_grid(. ~ outcome) +
+  # facet_grid(rows = vars(metric, outcome),
+  #            cols = vars(kartierungsumfang)) +
   labs(
-    title = "Verteilung DALY durch Lärm-bedingte Gesundheitsauswirkungen nach den Detail-Expositionsdaten der Bundesländer",
-    x = "Lärmquelle",
+    title = "Lärm-bedingte Krankheitslast errechnet aus \nULR-Straßenlärmbelastetenzahlen in den Ballungsräumen",
+    x = "Endpunkt",
     y = "Attributable Krankheitslast [DALY]"
   ) +
-  guides(fill = guide_legend(title = "Bundesland"))
-#ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
-ggsave("plots/DALY_Bundesländer_major.png", width = 12, height = 8)
+  guides(fill = guide_legend(title = "Bundesland"))+
+  scale_y_continuous(breaks = NULL)+
+    theme_gray(base_size = 15)
+
+ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
+#ggsave("plots/DALY_Bundesländer_major.png", width = 12, height = 8,dpi=200)
 ```
+
+
+```{r}
+resEEA_all %>% 
+  group_by(outcome) %>% 
+  summarize(DALY=sum(impact))
+```
+
