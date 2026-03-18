@@ -67,13 +67,25 @@ allExpo_w <- allExpo %>%
 Funktion zur Berechnung der Gesundheitsauswirkungen
 
 ```{r calc-health-impacts}
-calc_kreis_ar_impact <- function(dat) {
-  ifelse(dat %>%
+calc_macro_ar_impact <- function(dat) {
+  rt_thr_ERF_df<-dat %>%
            select(risk_type, threshold, ERF) %>%
-           unique() %>%
-           nrow() > 1,
+           unique()
+
+  ifelse(nrow(rt_thr_ERF_df) > 1,
          stop(
-           "Function calc_kreis_ar_impact expects a data frame with a single ERF function!"
+           "Function calc_macro_ar_impact expects a data frame with a single ERF function!",
+           rt_thr_ERF_df
+         ),
+         NA)
+  lzentr_gembez_df<-dat %>%
+           group_by(gemeinde_kennziffer,l_zentral,source) %>%
+           summarise(n=n())
+  ifelse( lzentr_gembez_df$n %>% 
+           max(.) > 1,
+         stop(
+           "Function calc_macro_ar_impact expects a data frame with a single exposure scenario!",
+           lzentr_gembez_df %>% filter(n>1)
          ),
          NA)
   dat %>%
@@ -84,8 +96,8 @@ calc_kreis_ar_impact <- function(dat) {
         exp_central = .$l_zentral,
         cutoff_central = first(.$threshold),
         erf_eq_central = first(.$ERF),
-        geo_id_micro = .$gemeinde_bezeichnung,
-        geo_id_macro = .$Kreis_Name,
+        geo_id_micro = .$gemeinde_kennziffer,
+        geo_id_macro = .$Bundesland_Code,
         dw_central = .$DW,
         duration_central = 1
       )
@@ -95,7 +107,9 @@ calc_kreis_ar_impact <- function(dat) {
     mutate(
       source = dat$source[1],
       metric = dat$metric[1],
-      outcome = dat$outcome[1]
+      outcome = dat$outcome[1],
+      datenquelle = dat$datenquelle[1],
+      kartierungsumfang=dat$kartierungsumfang[1]
     )
 }
 
@@ -103,6 +117,8 @@ calc_kreis_ar_impact <- function(dat) {
 ```
 
 ## Expositionsdaten und ERF-Funktionen zusammenführen
+
+Um die Umweltbedingte Krankheitslast zu berechnen, braucht healthiar ein dataframe mit expositionen und ERF zusammen. Das Zusammenführen geschieht hier:
 
 ```{r merge-exposure-erf}
 dat_exp_ERF <- allExpo_w %>%
@@ -124,34 +140,89 @@ dat_exp_ERF <- allExpo_w %>%
   mutate(threshold = replace_na(threshold, 0))
 ```
 
+Die zusammengeführten Daten haben diese Statistik:
+
+```{r}
+#| label: erf_exp_stat
+dat_exp_ERF %>% 
+  group_by(source,datenquelle,kartierungsumfang,outcome) %>% 
+  summarise(AnzBelastetenklassen=n(),Belastete=sum(exponierte)) %>% 
+  knitr::kable()
+```
+
+
 ## Gesundheitsauswirkungen für verschiedene Lärmquellen berechnen
 
-Hier beispielshaft für einige Gesundheitsauswirkungen: HA, HSD, Leseverständnis.
+Hier beispielshaft für einige Gesundheitsauswirkungen, zunächst die für "absolutes Risiko": HA, HSD, Leseverständnis.
+
+```{r function_all_ar_res}
+
+all_ar_res <- function(dat) {
+  outc_sourc_metr_liste <- dat %>%
+    filter(risk_type == "absolute_risk") %>%
+    select(outcome, source, metric) %>%
+    unique()
+  
+  print("hier wird diese Outcome-Liste berücksichtigt:")
+  print(outc_sourc_metr_liste)
+  outcome_all <- NULL
+  
+  # Basic for loop iteration
+  for (i in 1:nrow(outc_sourc_metr_liste)) {
+    zeile <- outc_sourc_metr_liste[i, ]
+    print("Nun Kombi:")
+    print(zeile)
+    outcome_all<-dat %>%
+      filter(outcome == zeile$outcome,
+             source == zeile$source,
+             metric == zeile$metric) %>%
+      calc_macro_ar_impact(.) %>%
+      rbind(outcome_all)# Assuming this function returns a data frame
+  }
+  return(outcome_all)
+}
+```
+
+
 
 ```{r health-impacts-road-air}
+
+datEEA_all <- dat_exp_ERF %>%
+  filter(datenquelle == "EEA",
+         kartierungsumfang == "all")
+
+resEEA_all<-all_ar_res(datEEA_all)
+
+datBundesland_major <- dat_exp_ERF %>%
+  filter(datenquelle == "Bundesland",
+         kartierungsumfang == "major")
+
+resBundesland_major<-all_ar_res(datBundesland_major)
+
 HA_road_res <- dat_exp_ERF %>%
   filter(source == "road", metric == "lden", outcome == "High noise annoyance") %>%
-  calc_kreis_ar_impact(.)
+  calc_macro_ar_impact(.)
 
 # Straßenlärm: Hohe Schlafstörung
 HSD_road_res <- dat_exp_ERF %>%
   filter(source == "road", metric == "lnight", outcome == "High sleep disturbance") %>%
-  calc_kreis_ar_impact(.)
+  calc_macro_ar_impact(.)
 
 # Fluglärm: Hohe Lärmbelästigung
 HA_air_res <- dat_exp_ERF %>%
   filter(source == "air", metric == "lden", outcome == "High noise annoyance") %>%
-  calc_kreis_ar_impact(.)
+  calc_macro_ar_impact(.)
 
 # Fluglärm: Hohe Schlafstörung
 HSD_air_res <- dat_exp_ERF %>%
   filter(source == "air", metric == "lnight", outcome == "High sleep disturbance") %>%
-  calc_kreis_ar_impact(.)
+  calc_macro_ar_impact(.)
 
 # Fluglärm: Leseverständnis
 Reading_air_res <- dat_exp_ERF %>%
   filter(source == "air", metric == "lden", outcome == "Reading Comprehension") %>%
-  calc_kreis_ar_impact(.)
+  calc_macro_ar_impact(.)
+
 ```
 
 ## Visualisierungen
@@ -175,9 +246,13 @@ allExpo_w %>%
 ggsave("plots/exposition_hessen.png", width = 12, height = 8)
 ```
 
-## Gesundheitsauswirkungen im Kreis Groß-Gerau
+## Gesundheitsauswirkungen in Regionen
 
 ```{r plot-exposure-kreis-gg}
+bundesland_daten <- read_delim("data/Gebietstabellen/bundesland_daten.csv", 
+    delim = ";", escape_double = FALSE, col_types = cols(bundesland_code = col_character()), 
+    trim_ws = TRUE)
+
 outcome_all <- HA_road_res %>%
   bind_rows(HSD_road_res) %>%
   bind_rows(HA_air_res) %>%
@@ -186,16 +261,20 @@ outcome_all <- HA_road_res %>%
 
 kagzrm_kreise <- c("Darmstadt-Dieburg", "Groß-Gerau", "Main-Taunus-Kreis", "Offenbach")
 
-outcome_all %>%
-  filter(geo_id_macro %in% kagzrm_kreise) %>%
-  ggplot(aes(x = source, fill = geo_id_macro, y = impact)) +
+resBundesland_major %>% 
+  left_join(bundesland_daten,by=join_by(geo_id_macro==bundesland_code)) %>% 
+# outcome_all %>%
+#   filter(geo_id_macro %in% kagzrm_kreise) %>%
+  ggplot(aes(x = source, fill = bundesland_name, y = impact)) +
   geom_col() +
-  facet_grid(. ~ outcome) +
+  facet_grid(rows=vars(metric,outcome),cols=vars(kartierungsumfang)) +
+  #facet_grid(. ~ outcome) +
   labs(
-    title = "Verteilung DALY durch Lärm-bedingte Gesundheitsauswirkungen für die Kreise der KAGZRM",
+    title = "Verteilung DALY durch Lärm-bedingte Gesundheitsauswirkungen nach den Detail-Expositionsdaten der Bundesländer",
     x = "Lärmquelle",
     y = "Attributable Krankheitslast [DALY]"
   ) +
-  guides(fill = guide_legend(title = "Kreis"))
-ggsave("plots/DALY_FlugStraße_KreiseKAGZRM.png", width = 12, height = 8)
+  guides(fill = guide_legend(title = "Bundesland"))
+#ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
+ggsave("plots/DALY_Bundesländer_major.png", width = 12, height = 8)
 ```
