@@ -471,8 +471,8 @@ data_sf <- dataOut  %>%
 ggplot(data_sf) +
   geom_sf(aes(fill = belastete/bevoelkerung,geometry=geom), color = NA) +
   scale_fill_viridis_c(na.value = "grey90") +
-  facet_grid(cols=vars(quelle,kartierungsumfang),
-                             rows=vars(datenquelle,metrik))+
+  facet_grid(cols=vars(quelle,kartierungsumfang,datenquelle),
+                             rows=vars(metrik))+
   theme_void()
 
 ```
