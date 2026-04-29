@@ -7,6 +7,7 @@ format: pptx
 ```{r setup, include=FALSE}
 # Bibliotheken laden
 rm(list = ls())
+.libPaths("M:/R/library-4.6")
 #falls aktuellster healthiar gewünscht; diese Lade-Methode funkioniert u.U. nicht auf allen Rechnern
 # library(remotes)
 # remotes::install_github(repo = "SwissTPH/healthiar", build_vignettes = TRUE)
@@ -15,6 +16,11 @@ library(healthiar)
 library(readxl)
 library(janitor)
 library(purrr)
+```
+
+```{r}
+#| label: load_shared_util_fkt
+source("scripts/utils.R")
 ```
 
 ## Einführung
