@@ -14,8 +14,13 @@ library(tidyverse)
 library(readxl)
 library(flextable)
 library(sf)
-
 ```
+
+```{r}
+#| label: load_shared_util_fkt
+source("scripts/utils.R")
+```
+
 
 ## Datenformate
 
@@ -45,11 +50,6 @@ meta <-
   dplyr::mutate(quelle = factor(quelle),
                 kartierungsumfang = factor(kartierungsumfang))
 
-read_colnames <- function(path) {
-  readr::read_csv(path, col_names = FALSE, show_col_types = FALSE) |>
-    dplyr::pull(1)
-}
-
 ```
 
 und in @tbl-metadaten dargestellt.
@@ -75,45 +75,7 @@ Entlang dieser Metadaten werden nun die bereitgestellten Expositionstabellen ein
 ```{r einlesen_verarbeiten}
 #| include: false
 
-read_one_dataset <- function(meta_row) {
-  col_names <- read_colnames(meta_row$spaltennamen)
-  readxl::read_excel(
-    path  = meta_row$pfad,
-    sheet = meta_row$tabellenblatt,
-    skip  = meta_row$zeilen_weglassen,
-    n_max = meta_row$zeilen_gesamt,
-    col_names = col_names,
-    na=c("","NA","Information not provided","No data","Not applicable")
-  ) %>%
-    mutate(geoschluessel_stellen = meta_row$geoschluessel_stellen,
-           datenquelle = meta_row$datenquelle)
-}
 ## Expositionsdaten schön machen
-
-lang_machen <- function(data) {
-  data %>%
-    select(contains("gemeinde") |
-             contains("belasteter") | contains("geoschluessel")) %>%
-    setNames(str_replace(names(.), "_bis_[0-9]*", "")) %>%
-    pivot_longer(
-      starts_with("anzahl"),
-      names_sep = "_ab_",
-      names_to = c("metrik", "l_untergrenze"),
-      values_to = "exponierte"
-    ) %>%
-    mutate(
-      l_untergrenze = as.numeric(l_untergrenze),
-      l_zentral = l_untergrenze + 2,
-      .keep = "unused"
-    ) %>%
-    mutate(metrik = str_remove(metrik, "anzahl_belasteter_")) %>%
-    replace_na(list(exponierte = 0)) #%>% 
-    # mutate(gemeinde_kennziffer=
-    #          gemeinde_kennziffer %>% 
-    #          str_sub(
-    #            start=geoschluessel_stellen - 5L,
-    #          ))
-}
 
 for (i in 1:nrow(meta)) {
   metadatazeile <- meta[i, ]
@@ -174,13 +136,6 @@ bundesland_daten%>%
 Hier wird sie nun vereinheitlicht auf das 8-stellige Format mit dem führenden zweistelligen Bundesland-Code.
 
 ```{r GKZvereinheitlichen}
-gkz_vereinheitlichen <- function(data) {
-  data %>% 
-  mutate(gemeinde_kennziffer=
-           str_sub(gemeinde_kennziffer,
-                   start = str_length(gemeinde_kennziffer)-5) %>% 
-           paste0(bundesland_code,.))
-}
 data<-data %>% 
   gkz_vereinheitlichen()
 
