@@ -23,7 +23,6 @@ source("scripts/utils.R")
 source("scripts/config.R")
 ```
 
-
 ## Datenformate
 
 Lärmexpositionsdaten werden häufig als Exceltabellen z.B. von Landes- oder Bundesämtern bereitgestellt. Deren jeweiliges Format ist oft ähnlich, unterscheidet sich aber in vielen Details. Um die Daten gut verarbeiten zu können, werden sie hier eingelesen und schön formatiert abgespeichert.
@@ -211,8 +210,7 @@ gv_gemeinden %>%
   knitr::kable()
 ```
 
-Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt.
-Für den Teil, in dem schon die Gemeindekennziffer existiert ist dies einfach
+Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt. Für den Teil, in dem schon die Gemeindekennziffer existiert ist dies einfach
 
 ```{r gemeindedaten_anhaengen}
 dataMitGKZ <- data %>%
@@ -286,7 +284,6 @@ dataOut %>%
   write_excel_csv2(paste0(cleanOutPath,"allExpo.csv"))
 
 ```
-
 
 ## Statistische Übersicht
 
@@ -389,7 +386,6 @@ vg250 %>%
   count(AGS) %>%
   filter(n > 1)
 ```
-
 
 Zusammen mit den Informationen aus der oben genannten Tabelle "gv_gemeinden" lässt sich beispielsweise eine Bevölkerungdichtekarte darstellen:
 
