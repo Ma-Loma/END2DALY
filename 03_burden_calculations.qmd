@@ -42,7 +42,7 @@ functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx") %>%
 
 # Gemeinde- und Kreisnamen laden
 gemeinden_daten <- read_delim(
-  "data/Gebietstabellen/processed/gv_kreis_gemeinden.csv",
+  PATH_GEMEINDE_KREIS_DATA,
   delim = ";",
   escape_double = FALSE,
   trim_ws = TRUE
