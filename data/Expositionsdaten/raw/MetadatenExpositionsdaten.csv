@@ -9,3 +9,7 @@ bundesland_code;quelle;kartierungsumfang;agglomeration;pfad;tabellenblatt;spalte
 03;Straße;major;outside;data/Expositionsdaten/raw/NS_2024-10-25_END422_Statistiken_Gemeinden_Ergebnisblatt_V4.xlsx;Tabelle1;data/Expositionsdaten/raw/ColNamesInd_NS_2024-10-25_END422_Statistiken_Gemeinden_Ergebnisblatt_V4.txt;5;542;8;Bundesland
 NA;Straße;all;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Road_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggAll_END_2022_cutoff241118_v4.txt;6;435;NA;EEA
 NA;Straße;major;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Road_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggMajor_END_2022_cutoff241118_v4.txt;6;435;NA;EEA
+NA;Flug;all;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Air_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggAll_END_2022_cutoff241118_v4.txt;6;435;NA;EEA
+NA;Flug;major;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Air_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggMajor_END_2022_cutoff241118_v4.txt;6;435;NA;EEA
+NA;Schiene;all;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Rail_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggAll_END_2022_cutoff241118_v4.txt;6;435;NA;EEA
+NA;Schiene;major;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Rail_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggMajor_END_2022_cutoff241118_v4.txt;6;435;NA;EEA
