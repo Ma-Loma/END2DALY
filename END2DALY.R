@@ -10,51 +10,51 @@ library(purrr)
 
 ## ETCHE Input lesen
 
-functionsETCHE <- read_excel("data/functionsETCHE.xlsx") %>%
+functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx") %>%
   mutate(ERF = str_replace_all(ERF, "threshold", as.character(threshold))) %>%
   mutate(DW = as.numeric(DW))
 
 ## HLNUG Expositionsdaten lesen
 
 dat_str <- read_excel(
-  "data/ULK2022StatistikGesamt_20240704.xlsx",
+  "data/Expositionsdaten/HE_ULK2022StatistikGesamt_20240704.xlsx",
   sheet = "Straßenlärm",
   skip = 2,
   n_max = 425,
-  col_names = read_lines("data/ColNamesStr_ULK2022StatistikGesamt_20240704.txt")
+  col_names = read_lines("data/Expositionsdaten/ColNamesStr_HE_ULK2022StatistikGesamt_20240704.txt")
 )
 
 # dat_str %>% names() %>% 
-#   write_lines("data/ColNamesStr_ULK2022StatistikGesamt_20240704.txt")
+#   write_lines("data/Expositionsdaten/ColNamesStr_ULK2022StatistikGesamt_20240704.txt")
 
 
 dat_str_BW <- read_excel(
-  "data/andere BL/BW_Belastungsstatistik_2022.xlsx",
+  "data/Expositionsdaten/BW_Belastungsstatistik_2022.xlsx",
   sheet = "Hauptverkehrsstraßen",
   skip = 4,
   n_max = 779,
-  col_names = read_lines("data/andere BL/ColNamesStr_BW_Belastungsstatistik_2022.txt")
+  col_names = read_lines("data/Expositionsdaten/ColNamesStr_BW_Belastungsstatistik_2022.txt")
   )
 
 dat_flug <- read_excel(
-  "data/ULK2022StatistikGesamt_20240704.xlsx",
+  "data/Expositionsdaten/HE_ULK2022StatistikGesamt_20240704.xlsx",
   sheet = "Fluglärm",
   skip = 1,
   n_max = 35,
-  col_names = read_lines("data/ColNamesFlug_ULK2022StatistikGesamt_20240704.txt")
+  col_names = read_lines("data/Expositionsdaten/ColNamesFlug_HE_ULK2022StatistikGesamt_20240704.txt")
 )
 
 dat_flug_BW <- read_excel(
-  "data/andere BL/BW_Belastungsstatistik_2022.xlsx",
+  "data/Expositionsdaten/BW_Belastungsstatistik_2022.xlsx",
   sheet = "Flughafen Stuttgart",
   skip = 4,
   n_max = 10,
-  col_names = read_lines("data/andere BL/ColNamesFlug_BW_Belastungsstatistik_2022.txt")
+  col_names = read_lines("data/Expositionsdaten/ColNamesFlug_BW_Belastungsstatistik_2022.txt")
 )
 
 
 dat_ind <- read_excel(
-  "data/ULK2022StatistikGesamt_20240704.xlsx",
+  "data/Expositionsdaten/HE_ULK2022StatistikGesamt_20240704.xlsx",
   sheet = "Industrielärm",
   skip = 1,
   n_max = 6
@@ -63,13 +63,13 @@ dat_ind <- read_excel(
 
 ## Gemeinde und Kreisnamen laden
 kreise_daten <- read_delim(
-  "./data/bundesweit/kreise_daten.csv",
+  "./data/Gebietstabellen/kreise_daten.csv",
   delim = ";",
   escape_double = FALSE,
   trim_ws = TRUE
 )
 gemeinden_daten <- read_delim(
-  "data/bundesweit/gemeinden_daten.csv",
+  "data/Gebietstabellen/gemeinden_daten.csv",
   delim = ";",
   escape_double = FALSE,
   trim_ws = TRUE

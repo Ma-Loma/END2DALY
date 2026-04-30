@@ -1,0 +1,124 @@
+---
+title: "Gebietsdaten mit Expositionen zusammenführen"
+author: "Matthias Lochmann"
+format: docx
+editor: visual
+execute:
+   echo:  false
+   warning: false
+---
+
+```{r front_matter}
+rm(list = ls())
+.libPaths("M:/R/library-4.6")
+library(tidyverse)
+library(readxl)
+library(flextable)
+library(sf)
+```
+
+```{r}
+#| label: load_shared_util_fkt
+source("scripts/utils.R")
+source("scripts/config.R")
+```
+
+## GIS-Übersicht
+
+Ich lade hier die [GIS-Daten der Gemeinden](https://daten.gdz.bkg.bund.de/produkte/vg/vg250_ebenen_0101/aktuell/vg250_01-01.utm32s.gpkg.ebenen.zip) des Bundesamts für Kartographie und Geodäsie (BKG) herunter und extrahiere daraus alle deutschen Gemeindegrenzen.
+
+```{r vg250_laden}
+vg250 <- st_read(PATH_VG250_GIS, layer = "vg250_gem") %>%
+  filter(GF == 4) # nur Landflächen, nicht Wasserflächen ...
+#filter(SN_G != "000") %>%
+#  mutate(gemeinde_kennziffer = paste0(str_sub(SDV_ARS, 1, 5), str_sub(SDV_ARS, -3)))
+# %>%
+#   group_by(gemeinde_kennziffer) %>%
+#   summarise(
+#     GEN = first(GEN),
+#     .groups = "drop"
+#   )
+
+ggplot(vg250) +
+  geom_sf(aes(geometry=geom,fill=paste(BEM,BEZ)),color=NA)+
+  scale_fill_discrete(name="Art der Gemeinde")+
+  theme_void()
+```
+
+Statistik über die Gemeinden in Deutschland:
+
+```{r vg250_gemeindestatistik}
+vg250 %>% 
+  st_drop_geometry() %>% 
+  group_by(BEM,BEZ) %>% 
+  summarise(n=n()) %>% 
+  knitr::kable()
+
+```
+
+In den Gemeinden gibt es folgende Dubletten:
+
+```{r dubletten}
+vg250 %>%
+  st_drop_geometry() %>%
+  count(AGS) %>%
+  filter(n > 1)
+```
+
+Zusammen mit den Informationen aus der im ersten Schritt generierten Tabelle lässt sich beispielsweise eine Bevölkerungdichtekarte darstellen:
+
+```{r gis_visualisierung_vg250}
+# Gemeinde- und Kreisnamen laden
+gemeinden_daten <- read_delim(
+  PATH_GEMEINDE_KREIS_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+
+vg250 %>%
+  left_join(gemeinden_daten, by = join_by(AGS==gemeinde_kennziffer)) %>% 
+  ggplot() +
+  geom_sf(aes(fill = bevoelkerung/flaeche,geometry=geom), color = NA) +
+  scale_fill_viridis_c(option="A",direction = -1) +
+  theme_minimal()+
+  labs(fill="Bevölkerungsdichte")+
+  theme_void()
+
+```
+
+## Expositionsdaten räumlich visualisieren
+
+Am Beispiel von Hessen wird der Umfang der Expositionsinformationen der verschiedenen Datenquellen visualiert:
+
+```{r gis_expositionsdaten_visualisieren}
+
+allExpo<-read_delim(
+  PATH_ALLEXPO_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+
+data_sf <- allExpo  %>%
+  left_join(gemeinden_daten) %>% 
+  filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
+  group_by(gemeinde_kennziffer,quelle,metrik,kartierungsumfang,datenquelle) %>%
+  summarise(
+    gemeinde_bezeichnung = first(gemeinde_bezeichnung),
+    bevoelkerung = max(bevoelkerung, na.rm = FALSE),
+    belastete = sum(exponierte)
+  ) %>%
+  left_join(vg250, by = join_by(gemeinde_kennziffer==AGS),relationship = "many-to-many") %>%
+  mutate(GEN = coalesce(gemeinde_bezeichnung, GEN))
+```
+
+```{r gis_expositionsdaten_plotten}
+ggplot(data_sf) +
+  geom_sf(aes(fill = belastete/bevoelkerung,geometry=geom), color = NA) +
+  scale_fill_viridis_c(na.value = "grey90") +
+  facet_grid(cols=vars(quelle,kartierungsumfang,datenquelle),
+                             rows=vars(metrik))+
+  theme_void()
+
+```

@@ -10,11 +10,17 @@ execute:
 
 ```{r front_matter}
 rm(list = ls())
+.libPaths("M:/R/library-4.6")
 library(tidyverse)
 library(readxl)
 library(flextable)
 library(sf)
+```
 
+```{r}
+#| label: load_shared_util_fkt
+source("scripts/utils.R")
+source("scripts/config.R")
 ```
 
 ## Datenformate
@@ -26,9 +32,7 @@ Lärmexpositionsdaten werden häufig als Exceltabellen z.B. von Landes- oder Bun
 In der Datei
 
 ```{r metadatentabelle}
-
-pfad_metadaten<-"data/Expositionsdaten/MetadatenExpositionsdaten.csv"
-pfad_metadaten
+PATH_METADATA_EXPOSURE
 ```
 
 liegt die manuell zu pflegende Metadatentabelle. Der Inhalt wird hier eingelesen
@@ -37,18 +41,13 @@ liegt die manuell zu pflegende Metadatentabelle. Der Inhalt wird hier eingelesen
 
 meta <-
   read_delim(
-    pfad_metadaten,
+    PATH_METADATA_EXPOSURE,
     delim = ";",
     escape_double = FALSE,
     trim_ws = TRUE
   ) |>
   dplyr::mutate(quelle = factor(quelle),
                 kartierungsumfang = factor(kartierungsumfang))
-
-read_colnames <- function(path) {
-  readr::read_csv(path, col_names = FALSE, show_col_types = FALSE) |>
-    dplyr::pull(1)
-}
 
 ```
 
@@ -75,45 +74,7 @@ Entlang dieser Metadaten werden nun die bereitgestellten Expositionstabellen ein
 ```{r einlesen_verarbeiten}
 #| include: false
 
-read_one_dataset <- function(meta_row) {
-  col_names <- read_colnames(meta_row$spaltennamen)
-  readxl::read_excel(
-    path  = meta_row$pfad,
-    sheet = meta_row$tabellenblatt,
-    skip  = meta_row$zeilen_weglassen,
-    n_max = meta_row$zeilen_gesamt,
-    col_names = col_names,
-    na=c("","NA","Information not provided","No data","Not applicable")
-  ) %>%
-    mutate(geoschluessel_stellen = meta_row$geoschluessel_stellen,
-           datenquelle = meta_row$datenquelle)
-}
 ## Expositionsdaten schön machen
-
-lang_machen <- function(data) {
-  data %>%
-    select(contains("gemeinde") |
-             contains("belasteter") | contains("geoschluessel")) %>%
-    setNames(str_replace(names(.), "_bis_[0-9]*", "")) %>%
-    pivot_longer(
-      starts_with("anzahl"),
-      names_sep = "_ab_",
-      names_to = c("metrik", "l_untergrenze"),
-      values_to = "exponierte"
-    ) %>%
-    mutate(
-      l_untergrenze = as.numeric(l_untergrenze),
-      l_zentral = l_untergrenze + 2,
-      .keep = "unused"
-    ) %>%
-    mutate(metrik = str_remove(metrik, "anzahl_belasteter_")) %>%
-    replace_na(list(exponierte = 0)) #%>% 
-    # mutate(gemeinde_kennziffer=
-    #          gemeinde_kennziffer %>% 
-    #          str_sub(
-    #            start=geoschluessel_stellen - 5L,
-    #          ))
-}
 
 for (i in 1:nrow(meta)) {
   metadatazeile <- meta[i, ]
@@ -163,10 +124,14 @@ for (i in 1:nrow(meta)) {
 Bislang haben die gemeinde_kennziffern ein uneinheitliches Format: sie umfassen entweder 0, 1 oder führende Ziffern, die das Bundesland codieren.
 
 ```{r GKZdarstellen}
-bundesland_daten <- read_delim("data/Gebietstabellen/bundesland_daten.csv", 
-    delim = ";", escape_double = FALSE, col_types = cols(bundesland_code = col_character()), 
-    trim_ws = TRUE)
-bundesland_daten%>% 
+bundesland_daten <- read_delim(
+  PATH_BUNDESLAND_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  col_types = cols(bundesland_code = col_character()),
+  trim_ws = TRUE
+)
+bundesland_daten %>%
   knitr::kable()
 
 ```
@@ -174,16 +139,8 @@ bundesland_daten%>%
 Hier wird sie nun vereinheitlicht auf das 8-stellige Format mit dem führenden zweistelligen Bundesland-Code.
 
 ```{r GKZvereinheitlichen}
-gkz_vereinheitlichen <- function(data) {
-  data %>% 
-  mutate(gemeinde_kennziffer=
-           str_sub(gemeinde_kennziffer,
-                   start = str_length(gemeinde_kennziffer)-5) %>% 
-           paste0(bundesland_code,.))
-}
 data<-data %>% 
   gkz_vereinheitlichen()
-
 ```
 
 ## Anreichern mit Gemeindeverzeichnis Daten (Destatis)
@@ -191,14 +148,13 @@ data<-data %>%
 Die Datei
 
 ```{r gv_pfad}
-pfad_gv_datei<-"./data/Gebietstabellen/GV100AD_30112025.txt"
-pfad_gv_datei
+PATH_GV_REFERENCE
 ```
 
 liegt in einem "fixed width" Format vor, welches gut maschinen- aber schlecht menschenlesbar ist. Hier werden nur die relevanten Zeilen eingelesen,
 
 ```{r gv_einlesen}
-gv_gemeinden <- pfad_gv_datei %>%
+gv_gemeinden <- PATH_GV_REFERENCE %>%
   readLines(., encoding = "UTF-8") %>%
   tibble(
     satzart               = substr(., 1, 2),
@@ -225,6 +181,22 @@ gv_gemeinden <- pfad_gv_datei %>%
   mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) %>%
   select(-., -satzart)
 
+kreise_daten <- read_delim(
+  PATH_KREISE_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+) %>% 
+  mutate(bundesland_kreis_code=paste0(Bundesland_Code,
+                                      Kreis_Code))
+
+
+
+gv_gemeinden %>% 
+  mutate(bundesland_kreis_code=str_sub(gemeinde_kennziffer,1,5)) %>% 
+  left_join(kreise_daten,by=join_by("bundesland_kreis_code")) %>% 
+  write_excel_csv2(paste0(PATH_AREA_OUTPUT,"gv_kreis_gemeinden.csv"))
+
 ```
 
 und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung" extrahiert. Ein Auszug daraus findet sich in @tbl-gemeindeverzeichnis.
@@ -238,8 +210,7 @@ gv_gemeinden %>%
   knitr::kable()
 ```
 
-Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt.
-Für den Teil, in dem schon die Gemeindekennziffer existiert ist dies einfach
+Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt. Für den Teil, in dem schon die Gemeindekennziffer existiert ist dies einfach
 
 ```{r gemeindedaten_anhaengen}
 dataMitGKZ <- data %>%
@@ -300,13 +271,17 @@ dataOut <-
 
 ```{r datenexport}
 #| message: false
-cleanOutPath<-"data/Expositionsdaten/sauber/"
-
 dataOut %>% 
-  write_excel_csv2(paste0(cleanOutPath,"allExpo.csv"))
+  select(-name_stadt_gemeinde,
+         -geoschluessel_stellen,
+         -bundesland_code,
+         -gemeinde_bezeichnung,
+         -gemeinde_kennzeichnung,
+         -bevoelkerung,
+         -flaeche) %>% 
+  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"allExpo.csv"))
 
 ```
-
 
 ## Statistische Übersicht
 
@@ -338,12 +313,14 @@ expoTab <-
     exponierteGesamt = sum(exponierte),
     AnzKartierteGemeinden = n(),
     bevoelkerung = sum(bevoelkerung)
-  ) %>%
+  )  %>%
+  group_by(datenquelle,bundesland_code,quelle,metrik) %>%
   pivot_wider(
     names_from = kartierungsumfang,
     values_from = c(exponierteGesamt, AnzKartierteGemeinden)
   ) %>%
-  ungroup 
+  ungroup
+
 expoTab%>%
   #  complete(bundesland_code, quelle, metrik) %>%
   knitr::kable()
@@ -351,7 +328,7 @@ expoTab%>%
 expoTab %>% 
   left_join(bundesland_daten) %>% 
   select(-bundesland_nummer,-bundesland_code) %>% 
-  write_excel_csv2(paste0(cleanOutPath,"Expositionstabelle.csv"))
+  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"Expositionstabelle.csv"))
 
 
 expoTab %>% 
@@ -363,91 +340,6 @@ expoTab %>%
             AnzKartierteGemeinden_major=sum(AnzKartierteGemeinden_major),
             AnzKartierteGemeinden_all=sum(AnzKartierteGemeinden_all),
             ) %>% 
-  write_excel_csv2(paste0(cleanOutPath,"Expositionszusammenfassung.csv"))
+  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"Expositionszusammenfassung_EEA.csv"))
 ```
 
-## GIS-Übersicht
-
-Ich lade hier die [GIS-Daten der Gemeinden](https://daten.gdz.bkg.bund.de/produkte/vg/vg250_ebenen_0101/aktuell/vg250_01-01.utm32s.gpkg.ebenen.zip) des Bundesamts für Kartographie und Geodäsie (BKG) herunter und extrahiere daraus alle deutschen Gemeindegrenzen.
-
-```{r vg250_laden}
-#st_layers("./data/GISDaten/DE_VG250.gpkg")
-
-vg250 <- st_read("./data/Gebietstabellen/DE_VG250.gpkg", layer = "vg250_gem") %>%
-  filter(GF == 4) # nur Landflächen, nicht Wasserflächen ...
-  #filter(SN_G != "000") %>%
-#  mutate(gemeinde_kennziffer = paste0(str_sub(SDV_ARS, 1, 5), str_sub(SDV_ARS, -3)))
-# %>%
-#   group_by(gemeinde_kennziffer) %>%
-#   summarise(
-#     GEN = first(GEN),
-#     .groups = "drop"
-#   )
-
-ggplot(vg250) +
-  geom_sf(aes(geometry=geom,fill=paste(BEM,BEZ)),color=NA)+
-  scale_fill_discrete(name="Art der Gemeinde")+
-  theme_void()
-```
-
-Statistik über die Gemeinden in Deutschland:
-
-```{r vg250_gemeindestatistik}
-vg250 %>% 
-  st_drop_geometry() %>% 
-  group_by(BEM,BEZ) %>% 
-  summarise(n=n()) %>% 
-  knitr::kable()
-
-```
-
-In den Gemeinden gibt es folgende Dubletten:
-
-```{r dubletten}
-vg250 %>%
-  st_drop_geometry() %>%
-  count(AGS) %>%
-  filter(n > 1)
-```
-
-
-Zusammen mit den Informationen aus der oben genannten Tabelle "gv_gemeinden" lässt sich beispielsweise eine Bevölkerungdichtekarte darstellen:
-
-```{r gis_visualisierung_vg250}
-vg250 %>%
-  left_join(gv_gemeinden, by = join_by(AGS==gemeinde_kennziffer)) %>% 
-  ggplot() +
-  geom_sf(aes(fill = bevoelkerung/flaeche,geometry=geom), color = NA) +
-  scale_fill_viridis_c(option="A",direction = -1) +
-  theme_minimal()+
-  labs(fill="Bevölkerungsdichte")+
-  theme_void()
-
-```
-
-## Expositionsdaten räumlich visualisieren
-
-Am Beispiel von Hessen wird der Umfang der Expositionsinformationen der verschiedenen Datenquellen visualiert:
-
-```{r gis_expositionsdaten_visualisieren}
-data_sf <- dataOut  %>%
-  filter(bundesland_code=="06") %>% 
-  group_by(gemeinde_kennziffer,quelle,metrik,kartierungsumfang,datenquelle) %>%
-  summarise(
-    name_stadt_gemeinde = first(name_stadt_gemeinde),
-    bevoelkerung = max(bevoelkerung, na.rm = FALSE),
-    belastete = sum(exponierte)
-  ) %>%
-  left_join(vg250, by = join_by(gemeinde_kennziffer==AGS),relationship = "many-to-many") %>%
-  mutate(GEN = coalesce(name_stadt_gemeinde, GEN))
-```
-
-```{r gis_expositionsdaten_plotten}
-ggplot(data_sf) +
-  geom_sf(aes(fill = belastete/bevoelkerung,geometry=geom), color = NA) +
-  scale_fill_viridis_c(na.value = "grey90") +
-  facet_grid(cols=vars(quelle,kartierungsumfang),
-                             rows=vars(datenquelle,metrik))+
-  theme_void()
-
-```

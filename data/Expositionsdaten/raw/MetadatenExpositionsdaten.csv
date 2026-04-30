@@ -1,0 +1,11 @@
+bundesland_code;quelle;kartierungsumfang;agglomeration;pfad;tabellenblatt;spaltennamen;zeilen_weglassen;zeilen_gesamt;geoschluessel_stellen;datenquelle
+06;Straße;all;agglomeration;data/Expositionsdaten/raw/HE_ULK2022StatistikGesamt_20240704.xlsx;Straßenlärm;data/Expositionsdaten/raw/ColNamesStr_HE_ULK2022StatistikGesamt_20240704.txt;2;6;6;Bundesland
+06;Straße;major;outside;data/Expositionsdaten/raw/HE_ULK2022StatistikGesamt_20240704.xlsx;Straßenlärm;data/Expositionsdaten/raw/ColNamesStr_HE_ULK2022StatistikGesamt_20240704.txt;8;419;6;Bundesland
+06;Flug;major;agglomeration;data/Expositionsdaten/raw/HE_ULK2022StatistikGesamt_20240704.xlsx;Fluglärm;data/Expositionsdaten/raw/ColNamesFlug_HE_ULK2022StatistikGesamt_20240704.txt;2;6;6;Bundesland
+06;Flug;major;outside;data/Expositionsdaten/raw/HE_ULK2022StatistikGesamt_20240704.xlsx;Fluglärm;data/Expositionsdaten/raw/ColNamesFlug_HE_ULK2022StatistikGesamt_20240704.txt;8;27;6;Bundesland
+06;Industrie;major;agglomeration;data/Expositionsdaten/raw/HE_ULK2022StatistikGesamt_20240704.xlsx;Industrielärm;data/Expositionsdaten/raw/ColNamesInd_HE_ULK2022StatistikGesamt_20240704.txt;2;6;6;Bundesland
+08;Straße;major;outside;data/Expositionsdaten/raw/BW_Belastungsstatistik_2022.xlsx;Hauptverkehrsstraßen;data/Expositionsdaten/raw/ColNamesStr_BW_Belastungsstatistik_2022.txt;4;779;7;Bundesland
+08;Flug;major;both;data/Expositionsdaten/raw/BW_Belastungsstatistik_2022.xlsx;Flughafen Stuttgart;data/Expositionsdaten/raw/ColNamesFlug_BW_Belastungsstatistik_2022.txt;4;10;7;Bundesland
+03;Straße;major;outside;data/Expositionsdaten/raw/NS_2024-10-25_END422_Statistiken_Gemeinden_Ergebnisblatt_V4.xlsx;Tabelle1;data/Expositionsdaten/raw/ColNamesInd_NS_2024-10-25_END422_Statistiken_Gemeinden_Ergebnisblatt_V4.txt;5;542;8;Bundesland
+NA;Straße;all;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Road_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggAll_END_2022_cutoff241118_v4.txt;6;435;NA;EEA
+NA;Straße;major;agglomeration;data/Expositionsdaten/raw/EU_END_2022_cutoff241118_v4.xlsx;Aggl_Road_Data;data/Expositionsdaten/raw/ColNamesStr_EU_AggMajor_END_2022_cutoff241118_v4.txt;6;435;NA;EEA

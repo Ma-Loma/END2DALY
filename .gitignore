@@ -1,12 +1,36 @@
-.Rproj.user
+# ============================================================================
+# R Session Files
 .Rhistory
+.Rapp.history
 .RData
 .Ruserdata
-*.Rproj
-*~*
-#*.png
-# Geodaten sind nett zum Anzeigen, zum Mitversionieren aber zu groß
-*gpkg
+*.Rproj.user/
+*~
+~*
 
-# Ergebnisse eines Seitenprojektes
-*KAGZRM*png
+# ============================================================================
+# Data Files (DO NOT COMMIT PROCESSED DATA)
+#data/Expositionsdaten/processed/  # ← Processed output
+#data/Gebietstabellen/processed/   # ← processed area data
+*.parquet                         # ← Future: if you switch to Parquet
+
+# ============================================================================
+# GIS Files (too large to version)
+*.gpkg
+*.shp
+*.dbf
+*.shx
+*.prj
+
+# ============================================================================
+# Generated Output
+plots/
+*.png
+*.pdf
+
+# ============================================================================
+# Project-Specific
+_legacy/
+_archive/
+*_old.R
+*KAGZRM*.png
