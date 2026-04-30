@@ -166,7 +166,7 @@ gv_gemeinden <- PATH_GV_REFERENCE %>%
   ) %>%
   filter(satzart == "60") %>%
   mutate(
-    gemeinde_kennzeichnung = case_match(
+    gemeinde_kennzeichnung = replace_values(
       gemeinde_kennzeichnung,
       "60" ~ "Markt",
       "61" ~ "Kreisfreie Stadt",
@@ -239,7 +239,7 @@ uebersetzungen <- c(
   "Ludwigshafen" = "Ludwigshafen am Rhein",
   "Munich" = "München",
   "Nuremberg" = "Nürnberg",
-  "Oldenburg" = "Oldenburg (Oldb)"
+  "Oldenburg" = "Oldenburg (Oldenburg)"
 )
 
 dataEEA <- data %>%
@@ -291,35 +291,38 @@ Bisher eingelesen wurden die in @tbl-expositionsstatistik zusammengefassten Expo
 #| label: tbl-expositionsstatistik
 #| tbl-cap: "Deskriptive Auswertung der bisher eingelesenen Expositionsdaten"
 #| tbl-colwidths: [60,40]
-
 expoTab <-
   dataOut %>%
-  group_by(
-    datenquelle,
-    gemeinde_kennziffer,
-    bundesland_code,
-    quelle,
-    metrik,
-    kartierungsumfang
+  summarise(
+    exponierte = sum(exponierte),
+    bevoelkerung = first(bevoelkerung),
+    .by = c(
+      datenquelle,
+      bundesland_code,
+      quelle,
+      metrik,
+      kartierungsumfang,
+      gemeinde_kennziffer
+    )
   ) %>%
-  summarise(exponierte = sum(exponierte),
-            bevoelkerung = first(bevoelkerung)) %>%
-  group_by(datenquelle,
-           bundesland_code,
-           quelle,
-           metrik,
-           kartierungsumfang) %>%
   summarise(
     exponierteGesamt = sum(exponierte),
     AnzKartierteGemeinden = n(),
-    bevoelkerung = sum(bevoelkerung)
-  )  %>%
-  group_by(datenquelle,bundesland_code,quelle,metrik) %>%
+    bevoelkerung = sum(bevoelkerung),
+    .by = c(
+      datenquelle,
+      bundesland_code,
+      quelle,
+      metrik,
+      kartierungsumfang
+    )
+  )%>%
   pivot_wider(
     names_from = kartierungsumfang,
-    values_from = c(exponierteGesamt, AnzKartierteGemeinden)
-  ) %>%
-  ungroup
+    values_from = c(bevoelkerung,
+                    exponierteGesamt, 
+                    AnzKartierteGemeinden)
+  )
 
 expoTab%>%
   #  complete(bundesland_code, quelle, metrik) %>%
@@ -334,7 +337,8 @@ expoTab %>%
 expoTab %>% 
   filter(datenquelle=="EEA") %>% 
   group_by(quelle,metrik) %>% 
-  summarise(bevoelkerung=sum(bevoelkerung),
+  summarise(bevoelkerung_major=sum(bevoelkerung_major),
+            bevoelkerung_all=sum(bevoelkerung_all),
             exponierteGesamt_major=sum(exponierteGesamt_major),
             exponierteGesamt_all=sum(exponierteGesamt_all),
             AnzKartierteGemeinden_major=sum(AnzKartierteGemeinden_major),
