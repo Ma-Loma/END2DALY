@@ -25,7 +25,7 @@ source("scripts/config.R")
 
 ## GIS-Übersicht
 
-Ich lade hier die [GIS-Daten der Gemeinden](https://daten.gdz.bkg.bund.de/produkte/vg/vg250_ebenen_0101/aktuell/vg250_01-01.utm32s.gpkg.ebenen.zip) des Bundesamts für Kartographie und Geodäsie (BKG) herunter und extrahiere daraus alle deutschen Gemeindegrenzen.
+Ich lade hier die [Verwaltungsgebiete 1:250 000 des BKG Stand 31.12.2021](https://daten.gdz.bkg.bund.de/produkte/vg/vg250-ew_ebenen_1231/2021/vg250-ew_12-31.utm32s.shape.ebenen.zip) des Bundesamts für Kartographie und Geodäsie (BKG) herunter und extrahiere daraus alle deutschen Gemeindegrenzen.
 
 ```{r vg250_laden}
 vg250 <- st_read(PATH_VG250_GIS, layer = "vg250_gem") %>%
@@ -45,21 +45,23 @@ ggplot(vg250) +
   theme_void()
 ```
 
-Aus den Daten ergibt sich auch die Bevölkerungsdichte:
+Die Daten enthalten auch Bevölkerung und Katasterfläche; daraus ergibt sich auch die Bevölkerungsdichte:
 
 ```{r}
 #| label: Bevoelkerungsdichtekarte
 ggplot(vg250) +
   geom_sf(aes(geometry=geom,fill=EWZ/KFL),color=NA)+
-  scale_fill_viridis_c(name="Bevölkerungsdichte",direction = -1)+
+  scale_fill_viridis_c(option="A",name="Bevölkerungsdichte",direction = -1)+
   theme_void()
 ```
 
 Statistik über die Gemeinden in Deutschland:
 
 ```{r vg250_gemeindestatistik}
-vg250 %>% 
-  st_drop_geometry() %>% 
+vg250tab<-vg250 %>% 
+  st_drop_geometry() 
+
+vg250tab%>% 
   group_by(BEM,BEZ) %>% 
   summarise(n=n(),Bevölkerung=sum(EWZ)) %>% 
   knitr::kable()
@@ -69,8 +71,7 @@ vg250 %>%
 In den Gemeinden gibt es folgende Dubletten:
 
 ```{r dubletten}
-vg250 %>%
-  st_drop_geometry() %>%
+vg250tab %>%
   count(AGS) %>%
   filter(n > 1)
 ```
@@ -94,6 +95,27 @@ vg250 %>%
   theme_minimal()+
   labs(fill="Bevölkerungsdichte")+
   theme_void()
+
+```
+
+```{r}
+#| label: Daten_Bevoelkerung_Vgl
+vg250tab %>%
+  left_join(gemeinden_daten, by = join_by(AGS == gemeinde_kennziffer)) %>%
+  filter(EWZ > 1000) %>%
+  ggplot(aes(x = EWZ,
+    y = (EWZ-bevoelkerung) / EWZ)) +
+  geom_point(aes(
+    color = Bundesland_Code
+  ),
+  size=0.3)+
+  scale_x_continuous(trans='log10')+
+  scale_y_continuous(labels = scales::percent)+
+  labs(title="Vergleich Gemeinde-Bevölkerungsdaten\naus GV100AD (Destatis) und VG250 (BKG)",
+       x="Bevölkerung BKG",
+       y="Bevölkerung (BKG-Destatis)/BKG",
+       caption="Hier nur Gemeinden über 1000 Einwohner gezeigt.\nBeide Datesätze beziehen sich auf auf den 31.12.2021.")
+#+  geom_text(aes(label=GEN))
 
 ```
 
@@ -125,10 +147,18 @@ data_sf <- allExpo  %>%
 
 ```{r gis_expositionsdaten_plotten}
 ggplot(data_sf) +
-  geom_sf(aes(fill = belastete/bevoelkerung,geometry=geom), color = NA) +
+  geom_sf(aes(fill = belastete / bevoelkerung, geometry = geom), color = NA) +
   scale_fill_viridis_c(na.value = "grey90") +
-  facet_grid(cols=vars(quelle,kartierungsumfang,datenquelle),
-                             rows=vars(metrik))+
-  theme_void()
+  facet_grid(cols = vars(quelle, datenquelle),
+             rows = vars(metrik, kartierungsumfang)) +
+  theme_bw()+
+  theme(
+    axis.text.x = element_blank(),  # Werte x-Achse weg
+    axis.text.y = element_blank(),  # Werte y-Achse weg
+    axis.ticks = element_blank(),   # Ticks (Striche) weg
+    axis.title.x = element_blank(), # Titel x-Achse weg
+    axis.title.y = element_blank(),  # Titel y-Achse weg
+    panel.spacing.x = unit(0, "line"),
+    panel.spacing.y = unit(0, "line"))
 
 ```
