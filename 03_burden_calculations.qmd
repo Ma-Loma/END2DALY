@@ -214,8 +214,9 @@ Lärmbelastung in Hessen nach Kreisen
 dir.create("plots", showWarnings = F)
 
 allExpo_w %>%
-  filter(Bundesland_Code=="06") %>% 
-  ggplot(aes(x = l_untergrenze, y = exponierte, fill = Kreis_Name)) +
+  mutate(Bundesland_Code=str_sub(gemeinde_kennziffer,1,2)) %>% 
+  filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
+  ggplot(aes(x = l_untergrenze, y = exponierte, fill = Kreis_Name.x)) +
   geom_col() +
   facet_grid(rows=vars(metrik),cols=vars(datenquelle,quelle,kartierungsumfang)) +
   labs(
@@ -231,13 +232,18 @@ ggsave("plots/exposition_hessen.png", width = 12, height = 8)
 ## Gesundheitsauswirkungen in Regionen
 
 ```{r plot-exposure-kreis-gg}
-bundesland_daten <- read_delim(PATH_BUNDESLAND_DATA, 
-    delim = ";", escape_double = FALSE, col_types = cols(bundesland_code = col_character()), 
-    trim_ws = TRUE)
+bundesland_daten <- read_delim(
+  PATH_BUNDESLAND_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  col_types = cols(bundesland_code = col_character()),
+  trim_ws = TRUE
+)
 
 kagzrm_kreise <- c("Darmstadt-Dieburg", "Groß-Gerau", "Main-Taunus-Kreis", "Offenbach")
 
 resEEA_all %>% 
+  mutate(geo_id_macro=str_sub(geo_id_micro,1,2)) %>% 
   left_join(bundesland_daten,by=join_by(geo_id_macro==bundesland_code)) %>% 
 #   filter(geo_id_macro %in% kagzrm_kreise) %>%
   ggplot(aes(x = outcome, fill = bundesland_name, y = impact)) +
