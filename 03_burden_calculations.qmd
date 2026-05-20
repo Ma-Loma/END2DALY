@@ -40,6 +40,13 @@ functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx") %>%
     DW = as.numeric(DW)
   )
 
+baselineETCHE <-read_delim(
+  "data/ETCHE/table_10_1.csv",
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+
 # Gemeinde- und Kreisnamen laden
 gemeinden_daten <- read_delim(
   PATH_GEMEINDE_KREIS_DATA,
@@ -54,6 +61,7 @@ allExpo <- read_delim(
   escape_double = FALSE,
   trim_ws = TRUE
 )
+
 
 
 ```
