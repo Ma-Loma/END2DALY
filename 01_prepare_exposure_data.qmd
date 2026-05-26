@@ -1,0 +1,307 @@
+---
+title: "Expositionsdaten vorbereiten"
+author: "Matthias Lochmann"
+format: docx
+editor: visual
+execute:
+   echo:  false
+   warning: false
+---
+
+```{r front_matter}
+rm(list = ls())
+.libPaths("M:/R/library-4.6")
+library(tidyverse)
+library(readxl)
+library(flextable)
+library(sf)
+```
+
+```{r}
+#| label: load_shared_util_fkt
+source("scripts/utils.R")
+source("scripts/config.R")
+```
+
+## Datenformate
+
+Lärmexpositionsdaten werden häufig als Exceltabellen z.B. von Landes- oder Bundesämtern bereitgestellt. Deren jeweiliges Format ist oft ähnlich, unterscheidet sich aber in vielen Details. Um die Daten gut verarbeiten zu können, werden sie hier eingelesen und schön formatiert abgespeichert.
+
+## Vorliegende Dateien
+
+In der Datei
+
+```{r metadatentabelle}
+PATH_METADATA_EXPOSURE
+```
+
+liegt die manuell zu pflegende Metadatentabelle. Der Inhalt wird hier eingelesen
+
+```{r lese_metadaten}
+
+meta <-
+  read_delim(
+    PATH_METADATA_EXPOSURE,
+    delim = ";",
+    escape_double = FALSE,
+    trim_ws = TRUE
+  ) |>
+  dplyr::mutate(quelle = factor(quelle),
+                kartierungsumfang = factor(kartierungsumfang))
+
+```
+
+und in @tbl-metadaten dargestellt.
+
+```{r}
+#| label: tbl-metadaten
+#| tbl-cap: "Die Metadaten, mit Hilfe derer die Expositionsdaten eingelesen werden"
+#| tbl-colwidths: [60,40]
+meta %>% 
+  mutate(
+    across(
+      where(is.character),
+      ~ str_trunc(.x, 30,side="left")
+    )
+  ) %>% 
+  knitr::kable()
+```
+
+## Verarbeitung Expositionsdaten
+
+Entlang dieser Metadaten werden nun die bereitgestellten Expositionstabellen eingelesen, gefiltert und in ein gut weiterverarbeitbares "long format" transformiert.
+
+```{r einlesen_verarbeiten}
+#| include: false
+
+## Expositionsdaten schön machen
+
+for (i in 1:nrow(meta)) {
+  metadatazeile <- meta[i, ]
+  cat("Lese ",
+      paste(metadatazeile),
+      ", Sheet",
+      metadatazeile$tabellenblatt,
+      "....\n")
+  ds <- read_one_dataset(metadatazeile)
+    if ("country" %in% names(ds)){
+      ds<-ds %>% 
+        filter(country=="Germany")
+    } 
+  ds<-ds%>%
+    mutate(gemeinde_kennziffer = if ("gemeinde_kennziffer" %in% names(.))
+      as.character(gemeinde_kennziffer)
+      else
+        NA_character_)
+    #mutate(gemeinde_kennziffer=as.character(gemeinde_kennziffer))
+  cat("Habe", nrow(ds), " Zeilen gelesen.")
+  ds <- ds %>%
+    lang_machen() %>%
+    mutate(
+      bundesland_code        = metadatazeile$bundesland_code,
+      quelle            = metadatazeile$quelle,
+      kartierungsumfang = metadatazeile$kartierungsumfang,
+      datenquelle = metadatazeile$datenquelle
+    )
+  cat("... und ins lange Format formatiert.\n")
+  if (i == 1) {
+    data <- ds
+    cat(" dataframe namens data geschaffen; hat",
+        nrow(data),
+        "Zeilen.\n")
+  } else {
+    data <- bind_rows(data, ds)
+    cat(" und angehängt. Insgesamt sind es jetzt",
+        nrow(data),
+        "Zeilen.\n")
+  }
+  
+}
+```
+
+## Geocode vereinheitlichen
+
+Bislang haben die gemeinde_kennziffern ein uneinheitliches Format: sie umfassen entweder 0, 1 oder führende Ziffern, die das Bundesland codieren.
+
+```{r GKZdarstellen}
+bundesland_daten <- read_delim(
+  PATH_BUNDESLAND_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  col_types = cols(bundesland_code = col_character()),
+  trim_ws = TRUE
+)
+bundesland_daten %>%
+  knitr::kable()
+
+```
+
+Hier wird sie nun vereinheitlicht auf das 8-stellige Format mit dem führenden zweistelligen Bundesland-Code.
+
+```{r GKZvereinheitlichen}
+data<-data %>% 
+  gkz_vereinheitlichen()
+```
+
+
+## Wiedereinlesen Destatisdaten
+
+```{r}
+#| label: readProcessedData
+
+kreise_daten <- read_delim(
+  PATH_KREISE_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+) %>% 
+  mutate(bundesland_kreis_code=paste0(Bundesland_Code,
+                                      Kreis_Code))
+
+gv_gemeinden <-
+  paste0(PATH_AREA_OUTPUT, "gv_kreis_gemeinden.csv") %>%
+  read_delim(.,
+             delim = ";",
+             escape_double = FALSE,
+             trim_ws = TRUE)
+
+```
+
+
+## Anreichern mit Gemeindeverzeichnis Daten (Destatis)
+Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt. Für den Teil, in dem schon die Gemeindekennziffer existiert ist dies einfach
+
+```{r gemeindedaten_anhaengen}
+dataMitGKZ <- data %>%
+  filter(datenquelle != "EEA") %>% 
+  left_join(gv_gemeinden, by = "gemeinde_kennziffer")
+
+```
+
+Für den Teil ohne Gemeindekennziffer muss zunächst der Gemeindename einheitlich gepflegt werden
+
+```{r gemeindedaten_GKZ_nachpflegen}
+ersetzungen <-
+  c(
+    "oe" = "ö",
+    "ae" = "ä",
+    "ue" = "ü",
+    "on the Main" = "am Main",
+    "on the Ruhr" = "an der Ruhr"
+  )
+uebersetzungen <- c(
+  "Brunswick" = "Braunschweig",
+  "Cologne" = "Köln",
+  "Freiburg" = "Freiburg im Breisgau",
+  "Halle" = "Halle (Saale)",
+  "Hanover" = "Hannover",
+  "Ludwigshafen" = "Ludwigshafen am Rhein",
+  "Munich" = "München",
+  "Nuremberg" = "Nürnberg",
+  "Oldenburg" = "Oldenburg (Oldenburg)"
+)
+
+dataEEA <- data %>%
+  filter(datenquelle == "EEA") %>%
+  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,ersetzungen)) %>%
+  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,uebersetzungen)) %>%
+  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,"Mörs","Moers")) %>% 
+  select(-gemeinde_kennziffer,-geoschluessel_stellen)
+
+EEArelevantGv <- gv_gemeinden %>%
+  filter(str_detect(gemeinde_kennzeichnung, "tadt")) %>%
+  mutate(name_stadt_gemeinde =   #alles was nach dem Komma steht ignorieren
+           str_split_fixed(gemeinde_bezeichnung, ",", 2)[, 1]) %>%
+  mutate(name_stadt_gemeinde = str_squish(name_stadt_gemeinde))
+
+dataEEAMitGKZ <- EEArelevantGv %>%
+  right_join(dataEEA, by = join_by(name_stadt_gemeinde)) %>%
+  mutate(geoschluessel_stellen = str_length(gemeinde_kennziffer)) %>%
+  mutate(bundesland_code = str_sub(gemeinde_kennziffer, 1, 2))
+
+dataEEAMitGKZ %>%
+  filter(is.na(gemeinde_kennziffer)) %>%
+  select(name_stadt_gemeinde) %>%
+  unique()
+
+dataOut <-
+  bind_rows(dataMitGKZ, dataEEAMitGKZ)
+```
+
+```{r datenexport}
+#| message: false
+dataOut %>% 
+  select(-name_stadt_gemeinde,
+         -geoschluessel_stellen,
+         -bundesland_code,
+         -gemeinde_bezeichnung,
+         -gemeinde_kennzeichnung,
+         -bevoelkerung,
+         -flaeche) %>% 
+  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"allExpo.csv"))
+
+```
+
+## Statistische Übersicht
+
+Bisher eingelesen wurden die in @tbl-expositionsstatistik zusammengefassten Expositionsdaten
+
+```{r}
+#| label: tbl-expositionsstatistik
+#| tbl-cap: "Deskriptive Auswertung der bisher eingelesenen Expositionsdaten"
+#| tbl-colwidths: [60,40]
+expoTab <-
+  dataOut %>%
+  summarise(
+    exponierte = sum(exponierte),
+    bevoelkerung = first(bevoelkerung),
+    .by = c(
+      datenquelle,
+      bundesland_code,
+      quelle,
+      metrik,
+      kartierungsumfang,
+      gemeinde_kennziffer
+    )
+  ) %>%
+  summarise(
+    exponierteGesamt = sum(exponierte),
+    AnzKartierteGemeinden = n(),
+    bevoelkerung = sum(bevoelkerung),
+    .by = c(
+      datenquelle,
+      bundesland_code,
+      quelle,
+      metrik,
+      kartierungsumfang
+    )
+  )%>%
+  pivot_wider(
+    names_from = kartierungsumfang,
+    values_from = c(bevoelkerung,
+                    exponierteGesamt, 
+                    AnzKartierteGemeinden)
+  )
+
+expoTab%>%
+  #  complete(bundesland_code, quelle, metrik) %>%
+  knitr::kable()
+
+expoTab %>% 
+  left_join(bundesland_daten) %>% 
+  select(-bundesland_nummer,-bundesland_code) %>% 
+  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"Expositionstabelle.csv"))
+
+
+expoTab %>% 
+  filter(datenquelle=="EEA") %>% 
+  group_by(quelle,metrik) %>% 
+  summarise(bevoelkerung_major=sum(bevoelkerung_major),
+            bevoelkerung_all=sum(bevoelkerung_all),
+            exponierteGesamt_major=sum(exponierteGesamt_major),
+            exponierteGesamt_all=sum(exponierteGesamt_all),
+            AnzKartierteGemeinden_major=sum(AnzKartierteGemeinden_major),
+            AnzKartierteGemeinden_all=sum(AnzKartierteGemeinden_all),
+            ) %>% 
+  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"Expositionszusammenfassung_EEA.csv"))
+```

@@ -1,0 +1,5 @@
+Bundesland_Code;Kreis_Code;Kreis_Name
+"06";"432";Darmstadt-Dieburg
+"06";"433";Groß-Gerau
+"06";"436";Main-Taunus-Kreis
+"06";"438";Offenbach

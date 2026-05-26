@@ -54,7 +54,7 @@ extract_data <- function(lines) {
 }
 
 # Lese die Datei
-lines <- readLines("./data/bundesweit/GV100AD_30112025.txt", encoding = "UTF-8")
+lines <- readLines(PATH_GV_REFERENCE, encoding = "UTF-8")
 
 # Extrahiere die Daten
 extracted_data <- extract_data(lines)

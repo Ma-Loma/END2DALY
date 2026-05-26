@@ -1,0 +1,225 @@
+---
+title: "Gebietsdaten mit Expositionen zusammenführen"
+author: "Matthias Lochmann"
+format: docx
+editor: visual
+execute:
+   echo:  false
+   warning: false
+---
+
+```{r front_matter}
+rm(list = ls())
+.libPaths("M:/R/library-4.6")
+library(tidyverse)
+library(readxl)
+library(flextable)
+library(sf)
+```
+
+```{r}
+#| label: load_shared_util_fkt
+source("scripts/utils.R")
+source("scripts/config.R")
+```
+
+## Bevölkerungsdaten von Destatis
+
+
+Die Datei
+
+```{r gv_pfad}
+PATH_GV_REFERENCE
+```
+
+liegt in einem "fixed width" Format vor, welches gut maschinen- aber schlecht menschenlesbar ist. Hier werden nur die relevanten Zeilen eingelesen,
+
+```{r gv_einlesen}
+gv_gemeinden <- PATH_GV_REFERENCE %>%
+  readLines(., encoding = "UTF-8") %>%
+  tibble(
+    satzart               = substr(., 1, 2),
+    gemeinde_kennziffer   = substr(., 11, 18),
+    gemeinde_bezeichnung   = substr(., 23, 72),
+    gemeinde_kennzeichnung = substr(., 123, 124),
+    bevoelkerung      = substr(., 140, 150) %>% as.numeric(),
+    flaeche = substr(., 129, 139) %>% as.numeric()
+  ) %>%
+  filter(satzart == "60") %>%
+  mutate(
+    gemeinde_kennzeichnung = replace_values(
+      gemeinde_kennzeichnung,
+      "60" ~ "Markt",
+      "61" ~ "Kreisfreie Stadt",
+      "62" ~ "Stadtkreis",
+      "63" ~ "Stadt",
+      "64" ~ "Kreisangehörige Gemeinde",
+      "65" ~ "gemeindefreies Gebiet, bewohnt",
+      "66" ~ "gemeindefreies Gebiet, unbewohnt",
+      "67" ~ "große Kreisstadt"
+    )
+  ) %>%
+  mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) %>%
+  select(-., -satzart)
+
+
+
+
+gv_gemeinden %>% 
+  mutate(bundesland_kreis_code=str_sub(gemeinde_kennziffer,1,5)) %>% 
+  left_join(kreise_daten,by=join_by("bundesland_kreis_code")) %>% 
+  write_excel_csv2(paste0(PATH_AREA_OUTPUT,"gv_kreis_gemeinden.csv"))
+
+```
+
+und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung" extrahiert. Ein Auszug daraus findet sich in @tbl-gemeindeverzeichnis.
+
+```{r}
+#| label: tbl-gemeindeverzeichnis
+#| tbl-cap: "Ein Auszug aus dem so gewonnenen Gemeindeverzeichnis"
+#| tbl-colwidths: [60,40]
+gv_gemeinden %>% 
+  slice_sample(n=5) %>%
+  knitr::kable()
+```
+
+
+## GIS-Übersicht
+
+Ich lade hier die [Verwaltungsgebiete 1:250 000 des BKG Stand 31.12.2021](https://daten.gdz.bkg.bund.de/produkte/vg/vg250-ew_ebenen_1231/2021/vg250-ew_12-31.utm32s.shape.ebenen.zip) des Bundesamts für Kartographie und Geodäsie (BKG) herunter und extrahiere daraus alle deutschen Gemeindegrenzen.
+
+```{r vg250_laden}
+vg250 <- st_read(PATH_VG250_GIS, layer = "vg250_gem") %>%
+  filter(GF == 4) # nur Landflächen, nicht Wasserflächen ...
+#filter(SN_G != "000") %>%
+#  mutate(gemeinde_kennziffer = paste0(str_sub(SDV_ARS, 1, 5), str_sub(SDV_ARS, -3)))
+# %>%
+#   group_by(gemeinde_kennziffer) %>%
+#   summarise(
+#     GEN = first(GEN),
+#     .groups = "drop"
+#   )
+
+ggplot(vg250) +
+  geom_sf(aes(geometry=geom,fill=paste(BEM,BEZ)),color=NA)+
+  scale_fill_discrete(name="Art der Gemeinde")+
+  theme_void()
+```
+
+Die Daten enthalten auch Bevölkerung und Katasterfläche; daraus ergibt sich auch die Bevölkerungsdichte:
+
+```{r}
+#| label: Bevoelkerungsdichtekarte
+ggplot(vg250) +
+  geom_sf(aes(geometry=geom,fill=EWZ/KFL),color=NA)+
+  scale_fill_viridis_c(option="A",name="Bevölkerungsdichte",direction = -1)+
+  theme_void()
+```
+
+Statistik über die Gemeinden in Deutschland:
+
+```{r vg250_gemeindestatistik}
+vg250tab<-vg250 %>% 
+  st_drop_geometry() 
+
+vg250tab%>% 
+  group_by(BEM,BEZ) %>% 
+  summarise(n=n(),Bevölkerung=sum(EWZ)) %>% 
+  knitr::kable()
+
+```
+
+In den Gemeinden gibt es folgende Dubletten:
+
+```{r dubletten}
+vg250tab %>%
+  count(AGS) %>%
+  filter(n > 1)
+```
+
+Zusammen mit den Informationen aus der im ersten Schritt generierten Tabelle lässt sich beispielsweise eine Bevölkerungdichtekarte darstellen:
+
+```{r gis_visualisierung_vg250}
+# Gemeinde- und Kreisnamen laden
+gemeinden_daten <- read_delim(
+  PATH_GEMEINDE_KREIS_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+
+vg250 %>%
+  left_join(gemeinden_daten, by = join_by(AGS==gemeinde_kennziffer)) %>% 
+  ggplot() +
+  geom_sf(aes(fill = bevoelkerung/flaeche,geometry=geom), color = NA) +
+  scale_fill_viridis_c(option="A",direction = -1) +
+  theme_minimal()+
+  labs(fill="Bevölkerungsdichte")+
+  theme_void()
+
+```
+
+```{r}
+#| label: Daten_Bevoelkerung_Vgl
+vg250tab %>%
+  left_join(gemeinden_daten, by = join_by(AGS == gemeinde_kennziffer)) %>%
+  filter(EWZ > 1000) %>%
+  ggplot(aes(x = EWZ,
+    y = (EWZ-bevoelkerung) / EWZ)) +
+  geom_point(aes(
+    color = Bundesland_Code
+  ),
+  size=0.3)+
+  scale_x_continuous(trans='log10')+
+  scale_y_continuous(labels = scales::percent)+
+  labs(title="Vergleich Gemeinde-Bevölkerungsdaten\naus GV100AD (Destatis) und VG250 (BKG)",
+       x="Bevölkerung BKG",
+       y="Bevölkerung (BKG-Destatis)/BKG",
+       caption="Hier nur Gemeinden über 1000 Einwohner gezeigt.\nBeide Datesätze beziehen sich auf auf den 31.12.2021.")
+#+  geom_text(aes(label=GEN))
+
+```
+
+## Expositionsdaten räumlich visualisieren
+
+Am Beispiel von Hessen wird der Umfang der Expositionsinformationen der verschiedenen Datenquellen visualiert:
+
+```{r gis_expositionsdaten_visualisieren}
+
+allExpo<-read_delim(
+  PATH_ALLEXPO_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+
+data_sf <- allExpo  %>%
+  left_join(gemeinden_daten) %>% 
+  filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
+  group_by(gemeinde_kennziffer,quelle,metrik,kartierungsumfang,datenquelle) %>%
+  summarise(
+    gemeinde_bezeichnung = first(gemeinde_bezeichnung),
+    bevoelkerung = max(bevoelkerung, na.rm = FALSE),
+    belastete = sum(exponierte)
+  ) %>%
+  left_join(vg250, by = join_by(gemeinde_kennziffer==AGS),relationship = "many-to-many") %>%
+  mutate(GEN = coalesce(gemeinde_bezeichnung, GEN))
+```
+
+```{r gis_expositionsdaten_plotten}
+ggplot(data_sf) +
+  geom_sf(aes(fill = belastete / bevoelkerung, geometry = geom), color = NA) +
+  scale_fill_viridis_c(na.value = "grey90") +
+  facet_grid(cols = vars(quelle, datenquelle),
+             rows = vars(metrik, kartierungsumfang)) +
+  theme_bw()+
+  theme(
+    axis.text.x = element_blank(),  # Werte x-Achse weg
+    axis.text.y = element_blank(),  # Werte y-Achse weg
+    axis.ticks = element_blank(),   # Ticks (Striche) weg
+    axis.title.x = element_blank(), # Titel x-Achse weg
+    axis.title.y = element_blank(),  # Titel y-Achse weg
+    panel.spacing.x = unit(0, "line"),
+    panel.spacing.y = unit(0, "line"))
+
+```

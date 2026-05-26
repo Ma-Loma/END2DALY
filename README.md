@@ -4,7 +4,7 @@
 Implementiere das Healthiar-Package mit Expositionsdaten aus den Lärmkartierungen. Im ersten Schritt werden in *Expositionsdaten_vorbereiten.qmd* die Expositionsdaten eingelesen und in ein geeignetes Format gebracht.
 Im zweiten Schritt werden dann in *healthiar_hessen.qmd* die Daten mithilfe des Packages [healthiar](https://doi.org/10.5281/zenodo.18220360) [1] weiterverarbeitet.
 
-[1] Axel Luyten, Alberto Castro, Gianni, Arno Pauwels, Frederik Priem, & LIVF. (2026). SwissTPH/healthiar: v.0.2.3. Zenodo. https://doi.org/10.5281/zenodo.18707512
+[1] Castro A, Luyten A (2026). *healthiar: Quantifying and Monetizing Health Impacts Attributable to Exposure*. doi:[10.5281/zenodo.18220360](https://doi.org/10.5281/zenodo.18220360). Contributors: Arno Pauwels, LilianaVazquez Fernandez, Gianni Ardielli, Iracy Pimenta, Carl Baravelli, Vanessa Gorasso, Susanne Breitner, Maria Lepnurm, Andreia Novais, Maria Jose Rueda Lopez, Pham Minh Nhat, Ana Barbosa, Joao Vasco Santos, Anette Kocbach Bolling., [https://CRAN.R-project.org/package=healthiar](https://CRAN.R-project.org/package=healthiar).
 
 ## Entwicklungsstand
 
