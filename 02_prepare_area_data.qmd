@@ -25,7 +25,6 @@ source("scripts/config.R")
 
 ## Bevölkerungsdaten von Destatis
 
-
 Die Datei
 
 ```{r gv_pfad}
@@ -82,7 +81,6 @@ gv_gemeinden %>%
   slice_sample(n=5) %>%
   knitr::kable()
 ```
-
 
 ## GIS-Übersicht
 
@@ -179,6 +177,10 @@ vg250tab %>%
 #+  geom_text(aes(label=GEN))
 
 ```
+
+## Europäische Geodaten
+
+Unter [NUTS3 Geodaten der Europäischen Kommission](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics) und [NUT3 Klassifikation der Europäischen Kommission](https://ec.europa.eu/eurostat/documents/345175/629341/NUTS2021-NUTS2024.xlsx/2b35915f-9c14-6841-8197-353408c4522d?t=1717505289640) finden sich die relevanten Geodaten /-tabellen für die mit einem europäischen ID-System.
 
 ## Expositionsdaten räumlich visualisieren
 
