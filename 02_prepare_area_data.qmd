@@ -34,33 +34,6 @@ PATH_GV_REFERENCE
 liegt in einem "fixed width" Format vor, welches gut maschinen- aber schlecht menschenlesbar ist. Hier werden nur die relevanten Zeilen eingelesen,
 
 ```{r gv_einlesen}
-# gv_gemeinden <- PATH_GV_REFERENCE %>%
-#   readLines(., encoding = "UTF-8") %>%
-#   tibble(
-#     satzart               = substr(., 1, 2),
-#     gemeinde_kennziffer   = substr(., 11, 18),
-#     gemeinde_bezeichnung   = substr(., 23, 72),
-#     gemeinde_kennzeichnung = substr(., 123, 124),
-#     bevoelkerung      = substr(., 140, 150) %>% as.numeric(),
-#     flaeche = substr(., 129, 139) %>% as.numeric()
-#   ) %>%
-#   filter(satzart == "60") %>%
-#   mutate(
-#     gemeinde_kennzeichnung = replace_values(
-#       gemeinde_kennzeichnung,
-#       "60" ~ "Markt",
-#       "61" ~ "Kreisfreie Stadt",
-#       "62" ~ "Stadtkreis",
-#       "63" ~ "Stadt",
-#       "64" ~ "Kreisangehörige Gemeinde",
-#       "65" ~ "gemeindefreies Gebiet, bewohnt",
-#       "66" ~ "gemeindefreies Gebiet, unbewohnt",
-#       "67" ~ "große Kreisstadt"
-#     )
-#   ) %>%
-#   mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) %>%
-#   select(-., -satzart)
-
 gv_kreise<-PATH_GV_REFERENCE %>%
   readLines(., encoding = "UTF-8") %>% 
   extract_kreise()
@@ -92,8 +65,7 @@ gv_gemeinden<-gv_gemeinden %>%
   left_join(age_fractions,
             by=join_by(iso_code)) %>% 
   mutate(bev_7_17=bevoelkerung*fraction_children_7_17_years,
-         bev_adult=bevoelkerung*fraction_adults_from_18_years) %>% 
-  select(-starts_with("fraction"))
+         bev_adult=bevoelkerung*fraction_adults_from_18_years)
 
 ```
 
