@@ -17,6 +17,7 @@ PATH_BUNDESLAND_DATA   <- "data/Gebietstabellen/raw/bundesland_daten.csv"
 
 PATH_KAGZRM_KREISE_DATA<- "data/Gebietstabellen/raw/kagzrm_kreise.txt"
 PATH_KAGZRM_GEMEINDE_DATA<- "data/Gebietstabellen/raw/kagzrm_gemeinden.txt"
+PATH_NATIONAL_AGEPOP_DATA<-"data/ETCHE/annex_3.csv"
 
 # Output paths
 PATH_EXPO_OUTPUT       <- "data/Expositionsdaten/processed/"

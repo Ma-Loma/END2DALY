@@ -34,44 +34,70 @@ PATH_GV_REFERENCE
 liegt in einem "fixed width" Format vor, welches gut maschinen- aber schlecht menschenlesbar ist. Hier werden nur die relevanten Zeilen eingelesen,
 
 ```{r gv_einlesen}
-gv_gemeinden <- PATH_GV_REFERENCE %>%
-  readLines(., encoding = "UTF-8") %>%
-  tibble(
-    satzart               = substr(., 1, 2),
-    gemeinde_kennziffer   = substr(., 11, 18),
-    gemeinde_bezeichnung   = substr(., 23, 72),
-    gemeinde_kennzeichnung = substr(., 123, 124),
-    bevoelkerung      = substr(., 140, 150) %>% as.numeric(),
-    flaeche = substr(., 129, 139) %>% as.numeric()
-  ) %>%
-  filter(satzart == "60") %>%
-  mutate(
-    gemeinde_kennzeichnung = replace_values(
-      gemeinde_kennzeichnung,
-      "60" ~ "Markt",
-      "61" ~ "Kreisfreie Stadt",
-      "62" ~ "Stadtkreis",
-      "63" ~ "Stadt",
-      "64" ~ "Kreisangehörige Gemeinde",
-      "65" ~ "gemeindefreies Gebiet, bewohnt",
-      "66" ~ "gemeindefreies Gebiet, unbewohnt",
-      "67" ~ "große Kreisstadt"
-    )
-  ) %>%
-  mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) %>%
-  select(-., -satzart)
+# gv_gemeinden <- PATH_GV_REFERENCE %>%
+#   readLines(., encoding = "UTF-8") %>%
+#   tibble(
+#     satzart               = substr(., 1, 2),
+#     gemeinde_kennziffer   = substr(., 11, 18),
+#     gemeinde_bezeichnung   = substr(., 23, 72),
+#     gemeinde_kennzeichnung = substr(., 123, 124),
+#     bevoelkerung      = substr(., 140, 150) %>% as.numeric(),
+#     flaeche = substr(., 129, 139) %>% as.numeric()
+#   ) %>%
+#   filter(satzart == "60") %>%
+#   mutate(
+#     gemeinde_kennzeichnung = replace_values(
+#       gemeinde_kennzeichnung,
+#       "60" ~ "Markt",
+#       "61" ~ "Kreisfreie Stadt",
+#       "62" ~ "Stadtkreis",
+#       "63" ~ "Stadt",
+#       "64" ~ "Kreisangehörige Gemeinde",
+#       "65" ~ "gemeindefreies Gebiet, bewohnt",
+#       "66" ~ "gemeindefreies Gebiet, unbewohnt",
+#       "67" ~ "große Kreisstadt"
+#     )
+#   ) %>%
+#   mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) %>%
+#   select(-., -satzart)
 
+gv_kreise<-PATH_GV_REFERENCE %>%
+  readLines(., encoding = "UTF-8") %>% 
+  extract_kreise()
 
-
-
-gv_gemeinden %>% 
-  mutate(bundesland_kreis_code=str_sub(gemeinde_kennziffer,1,5)) %>% 
-  left_join(kreise_daten,by=join_by("bundesland_kreis_code")) %>% 
-  write_excel_csv2(paste0(PATH_AREA_OUTPUT,"gv_kreis_gemeinden.csv"))
+gv_gemeinden<-PATH_GV_REFERENCE %>%
+  readLines(., encoding = "UTF-8") %>% 
+  extract_gemeinden()
 
 ```
 
-und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung" extrahiert. Ein Auszug daraus findet sich in @tbl-gemeindeverzeichnis.
+und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung,flaeche" extrahiert. Zusätzlich werden aus Annex III des ETC-HE Reports 2023/11 die Bevölkerungsanteile der 7-17-jährigen Kinder und der Erwachsenen auf Staatsebene extrahiert - hier werden nun die Anteile für Deutschland pauschal auf alle Gemeinden verwendet, um so die Altersverteilung auf Gemeindeebene abzuschätzen.
+
+```{r}
+#| label: age_data
+age_data <- read_delim(
+  PATH_NATIONAL_AGEPOP_DATA,
+  delim = ",",
+  escape_double = FALSE,
+  trim_ws = TRUE
+) %>% 
+  janitor::clean_names()
+
+age_fractions<-age_data %>% 
+  select(iso_code,
+         starts_with("fraction"))
+
+gv_gemeinden<-gv_gemeinden %>% 
+  mutate(iso_code="DE") %>% 
+  left_join(age_fractions,
+            by=join_by(iso_code)) %>% 
+  mutate(bev_7_17=bevoelkerung*fraction_children_7_17_years,
+         bev_adult=bevoelkerung*fraction_adults_from_18_years) %>% 
+  select(-starts_with("fraction"))
+
+```
+
+Ein Auszug daraus findet sich in @tbl-gemeindeverzeichnis.
 
 ```{r}
 #| label: tbl-gemeindeverzeichnis
@@ -80,6 +106,16 @@ und die Felder "gemeinde_kennziffer, gemeinde_bezeichnung, bevoelkerung" extrahi
 gv_gemeinden %>% 
   slice_sample(n=5) %>%
   knitr::kable()
+
+
+gv_kreise<-gv_kreise %>% 
+  mutate(bundesland_kreis_code=paste0(bundesland_code,kreis_code))
+
+gv_gemeinden %>% 
+  mutate(bundesland_kreis_code=str_sub(gemeinde_kennziffer,1,5)) %>% 
+  left_join(gv_kreise,by=join_by("bundesland_kreis_code")) %>% 
+  write_excel_csv(paste0(PATH_AREA_OUTPUT,"gv_kreis_gemeinden.csv"))
+
 ```
 
 ## GIS-Übersicht
@@ -110,7 +146,7 @@ Die Daten enthalten auch Bevölkerung und Katasterfläche; daraus ergibt sich au
 #| label: Bevoelkerungsdichtekarte
 ggplot(vg250) +
   geom_sf(aes(geometry=geom,fill=EWZ/KFL),color=NA)+
-  scale_fill_viridis_c(option="A",name="Bevölkerungsdichte",direction = -1)+
+  scale_fill_viridis_c(option="A",name="Bevölkerungsdichte\n[/km² Katasterfläche]",direction = -1)+
   theme_void()
 ```
 
@@ -135,37 +171,39 @@ vg250tab %>%
   filter(n > 1)
 ```
 
-Zusammen mit den Informationen aus der im ersten Schritt generierten Tabelle lässt sich beispielsweise eine Bevölkerungdichtekarte darstellen:
+Zusammen mit den Informationen aus der im ersten Schritt generierten Tabelle lässt sich beispielsweise eine Kinder-Bevölkerungdichtekarte (von 7-17 Jahren) darstellen:
 
 ```{r gis_visualisierung_vg250}
 # Gemeinde- und Kreisnamen laden
-gemeinden_daten <- read_delim(
+gemeinden_enh_data <- read_delim(
   PATH_GEMEINDE_KREIS_DATA,
-  delim = ";",
+  delim = ",",
   escape_double = FALSE,
   trim_ws = TRUE
 )
 
 vg250 %>%
-  left_join(gemeinden_daten, by = join_by(AGS==gemeinde_kennziffer)) %>% 
+  left_join(gemeinden_enh_data, by = join_by(AGS==gemeinde_kennziffer)) %>% 
   ggplot() +
-  geom_sf(aes(fill = bevoelkerung/flaeche,geometry=geom), color = NA) +
+  geom_sf(aes(fill = bev_7_17/flaeche,geometry=geom), color = NA) +
   scale_fill_viridis_c(option="A",direction = -1) +
   theme_minimal()+
-  labs(fill="Bevölkerungsdichte")+
+  labs(fill="Kinder-\nBevölkerungsdichte\n[/ha]")+
   theme_void()
 
 ```
 
+In @fig-Daten_Bevoelkerung-Vgl werden die Bevölkerungsdaten aus den beiden Quellen verglichen - man erwartet keine Abweichung. Abweichungen würden auf unterschiedliche Datenstände oder sonstige Probleme hinweisen.
+
 ```{r}
-#| label: Daten_Bevoelkerung_Vgl
+#| label: fig-Daten_Bevoelkerung_Vgl
 vg250tab %>%
-  left_join(gemeinden_daten, by = join_by(AGS == gemeinde_kennziffer)) %>%
+  left_join(gemeinden_enh_data, by = join_by(AGS == gemeinde_kennziffer)) %>%
   filter(EWZ > 1000) %>%
   ggplot(aes(x = EWZ,
     y = (EWZ-bevoelkerung) / EWZ)) +
   geom_point(aes(
-    color = Bundesland_Code
+    color = bundesland_code
   ),
   size=0.3)+
   scale_x_continuous(trans='log10')+
@@ -196,8 +234,8 @@ allExpo<-read_delim(
 )
 
 data_sf <- allExpo  %>%
-  left_join(gemeinden_daten) %>% 
-  filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
+  left_join(gemeinden_enh_data) %>% 
+  filter(bundesland_code==HESSEN_BUNDESLAND_CODE) %>% 
   group_by(gemeinde_kennziffer,quelle,metrik,kartierungsumfang,datenquelle) %>%
   summarise(
     gemeinde_bezeichnung = first(gemeinde_bezeichnung),
