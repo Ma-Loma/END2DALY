@@ -66,6 +66,28 @@ allExpo <- read_delim(
 
 ```
 
+In @fig-plotERFs all ERFs are on display.
+
+```{r}
+#| label: fig-plotERFs
+#| fig-cap: "Overview of all imported ERF."
+functionsETCHE |>
+  # mutate(id = row_number()) |>
+  mutate(data = map(ERF, \(formel)
+                    tibble(
+                      c = 35:85, y = sapply(35:85, \(c) eval(parse(text = formel)))
+                    ))) |>
+  unnest(data) |>
+  ggplot(aes(c, y)) +
+  geom_line(aes(linetype = metric, color = risk_type)) +
+  facet_grid(
+    cols = vars(source),
+    rows = vars(outcome),
+    labeller = labeller(outcome = label_wrap_gen(width = 10))
+  )
+```
+
+
 ## Expositions- und Gemeindedaten zusammenführen
 
 Hier gibts eine breite Tabelle, sollte später noch mehr Richtung saubere Datenbank gepflegt werden.
@@ -159,8 +181,9 @@ Die zusammengeführten Daten haben diese Statistik:
 ```{r}
 #| label: erf_exp_stat
 dat_exp_ERF %>% 
-  group_by(source,datenquelle,kartierungsumfang,outcome) %>% 
-  summarise(AnzBelastetenklassen=n(),Belastete=sum(exponierte)) %>% 
+  summarise(AnzBelastetenklassen=n(),
+            Belastete=sum(exponierte),
+            .by=c(source,datenquelle,kartierungsumfang,outcome)) %>% 
   knitr::kable()
 ```
 
@@ -224,7 +247,7 @@ dir.create("plots", showWarnings = F)
 allExpo_w %>%
   mutate(Bundesland_Code=str_sub(gemeinde_kennziffer,1,2)) %>% 
   filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
-  ggplot(aes(x = l_untergrenze, y = exponierte, fill = Kreis_Name.x)) +
+  ggplot(aes(x = l_untergrenze, y = exponierte, fill = Kreis_Name)) +
   geom_col() +
   facet_grid(rows=vars(metrik),cols=vars(datenquelle,quelle,kartierungsumfang)) +
   labs(
