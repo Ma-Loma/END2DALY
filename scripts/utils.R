@@ -316,3 +316,30 @@ extract_gemeinden <- function(lines) {
     mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) 
   return(gemeinden_data)
 }
+
+
+#' Use given age fractions to reduce both exposed and population in each row
+#'
+#' @param dat data frame with population, exposed and fractions
+#'
+#' @returns same data frame with population, exposed and fractions multiplied
+#' @export
+#'
+#' @examples multiply_with_age_fraction(dat_exp_ERF)
+multiply_with_age_fraction <- function(dat){
+  dat |>
+    mutate(
+      exponierte =
+        replace_when(
+          exponierte,
+          population_type %in% c("adults") ~ exponierte * fraction_adults_from_18_years,
+          population_type %in% c("children") ~ exponierte * fraction_children_7_17_years
+        ),
+      bevoelkerung =
+        replace_when(
+          bevoelkerung,
+          population_type %in% c("adults") ~ bevoelkerung * fraction_adults_from_18_years,
+          population_type %in% c("children") ~ bevoelkerung * fraction_children_7_17_years
+        )
+    )
+}
