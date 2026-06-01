@@ -41,13 +41,16 @@ functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx") %>%
     DW = as.numeric(DW)
   )
 
-baselineETCHE <-read_delim(
+baselineETCHE <- read_delim(
   "data/ETCHE/table_10_1.csv",
   delim = ";",
   escape_double = FALSE,
   trim_ws = TRUE
-)|>
-  pivot_longer(-Country,names_sep = "_",names_to = c("endpoint","unit"))
+) |>
+  pivot_longer(-iso_code,
+               names_sep = "_",
+               names_to = c("outcome", "baseline_unit"),
+               values_to = "bhd")
 
 # Gemeinde- und Kreisnamen laden
 gemeinden_daten <- read_delim(
@@ -63,7 +66,6 @@ allExpo <- read_delim(
   escape_double = FALSE,
   trim_ws = TRUE
 )
-
 
 
 ```
@@ -122,7 +124,11 @@ dat_exp_ERF <- allExpo_w %>%
   left_join(functionsETCHE,
             by = join_by(source, metric),
             relationship = "many-to-many") %>%
-  mutate(threshold = replace_na(threshold, 0))
+  mutate(threshold = replace_na(threshold, 0)) |>
+  left_join(baselineETCHE|>
+              filter(str_starts(baseline_unit,"Y")),
+            by = join_by(iso_code, outcome))
+  
 ```
 
 Die zusammengeführten Daten haben diese Statistik:
