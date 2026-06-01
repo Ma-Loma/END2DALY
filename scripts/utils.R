@@ -383,8 +383,8 @@ check_exp_single_erf_exp <- function(dat) {
 #' @returns a dataframe with detailed infos of input and outcome
 #' @export
 #'
-#' @details check data (single exposure scenario and single ERF)
-#' then pass it to healthiar::attribute_health.
+#' @details checks data (single exposure scenario and single ERF)
+#' then passes it to healthiar::attribute_health.
 #' The information of source,metric,outcome,datenquelle,kartierungsumfang is piped through using the info field.
 #' 
 #' @examples
@@ -402,6 +402,50 @@ calc_macro_ar_impact <- function(dat) {
         erf_eq_central = first(.$ERF),
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$Bundesland_Code,
+        dw_central = .$DW,
+        duration_central = 1,
+        info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
+      )
+    } %>%
+    .$health_detailed %>%
+    .$results_raw %>%
+    mutate(
+      source = info_column_1,
+      metric = info_column_2,
+      outcome = info_column_3,
+      datenquelle = info_column_4,
+      kartierungsumfang=info_column_5,
+      .keep="unused"
+    )
+}
+
+#' Calculate impact of relative risk endpoints
+#'
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,Bundesland_Code,DW
+#'
+#' @returns a dataframe with detailed infos of input and outcome
+#' @export
+#'
+#' @details checks data (single exposure scenario and single ERF)
+#' then passes it to healthiar::attribute_health.
+#' The information of source,metric,outcome,datenquelle,kartierungsumfang is piped through using the info field.
+#' 
+#' @examples
+calc_macro_rr_impact <- function(dat) {
+  
+  check_exp_single_erf_exp(dat)
+  
+  dat %>%
+    {
+      healthiar::attribute_health(
+        approach_risk = "relative_risk",
+        pop_exp = .$exponierte,
+        exp_central = .$l_zentral,
+        cutoff_central = first(.$threshold),
+        erf_eq_central = first(.$ERF),
+        bhd_central = .$bhd,
+        geo_id_micro = .$gemeinde_kennziffer,
+        geo_id_macro = .$bundesland_code,
         dw_central = .$DW,
         duration_central = 1,
         info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
