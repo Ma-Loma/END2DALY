@@ -343,3 +343,64 @@ multiply_with_age_fraction <- function(dat){
         )
     )
 }
+
+
+#' Calculate impact of absolute risk endpoints
+#'
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,Bundesland_Code,DW
+#'
+#' @returns a dataframe with detailed infos of input and outcome
+#' @export
+#'
+#' @details check data (single exposure scenario and single ERF)
+#' then pass it to healthiar::attribute_health.
+#' The information of source,metric,outcome,datenquelle,kartierungsumfang is piped through using the info field.
+#' 
+#' @examples
+calc_macro_ar_impact <- function(dat) {
+  rt_thr_ERF_df<-dat %>%
+    select(risk_type, threshold, ERF) %>%
+    unique()
+  
+  ifelse(nrow(rt_thr_ERF_df) > 1,
+         stop(
+           "Function calc_macro_ar_impact expects a data frame with a single ERF function!",
+           rt_thr_ERF_df
+         ),
+         NA)
+  lzentr_gembez_df<-dat %>%
+    group_by(gemeinde_kennziffer,l_zentral,source) %>%
+    summarise(n=n())
+  ifelse( lzentr_gembez_df$n %>% 
+            max(.) > 1,
+          stop(
+            "Function calc_macro_ar_impact expects a data frame with a single exposure scenario!",
+            lzentr_gembez_df %>% filter(n>1)
+          ),
+          NA)
+  dat %>%
+    {
+      healthiar::attribute_health(
+        approach_risk = "absolute_risk",
+        pop_exp = .$exponierte,
+        exp_central = .$l_zentral,
+        cutoff_central = first(.$threshold),
+        erf_eq_central = first(.$ERF),
+        geo_id_micro = .$gemeinde_kennziffer,
+        geo_id_macro = .$Bundesland_Code,
+        dw_central = .$DW,
+        duration_central = 1,
+        info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
+      )
+    } %>%
+    .$health_detailed %>%
+    .$results_raw %>%
+    mutate(
+      source = info_column_1,
+      metric = info_column_2,
+      outcome = info_column_3,
+      datenquelle = info_column_4,
+      kartierungsumfang=info_column_5,
+      .keep="unused"
+    )
+}
