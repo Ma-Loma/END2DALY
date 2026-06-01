@@ -352,6 +352,10 @@ multiply_with_age_fraction <- function(dat){
 #' @returns a dataframe with detailed infos of input and outcome
 #' @export
 #'
+#' @details check data (single exposure scenario and single ERF)
+#' then pass it to healthiar::attribute_health.
+#' The information of source,metric,outcome,datenquelle,kartierungsumfang is piped through using the info field.
+#' 
 #' @examples
 calc_macro_ar_impact <- function(dat) {
   rt_thr_ERF_df<-dat %>%
