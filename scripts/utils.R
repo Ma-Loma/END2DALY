@@ -345,6 +345,37 @@ multiply_with_age_fraction <- function(dat){
 }
 
 
+#' Helper function to check 
+#'
+#' @param dat 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+check_exp_single_erf_exp <- function(dat) {
+  rt_thr_ERF_df<-dat %>%
+    select(risk_type, threshold, ERF) %>%
+    unique()
+  
+  ifelse(nrow(rt_thr_ERF_df) > 1,
+         stop(
+           "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single ERF function!",
+           rt_thr_ERF_df
+         ),
+         NA)
+  lzentr_gembez_df<-dat %>%
+    group_by(gemeinde_kennziffer,l_zentral,source) %>%
+    summarise(n=n())
+  ifelse( lzentr_gembez_df$n %>% 
+            max(.) > 1,
+          stop(
+            "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single exposure scenario!",
+            lzentr_gembez_df %>% filter(n>1)
+          ),
+          NA)
+}
+
 #' Calculate impact of absolute risk endpoints
 #'
 #' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,Bundesland_Code,DW
@@ -358,26 +389,9 @@ multiply_with_age_fraction <- function(dat){
 #' 
 #' @examples
 calc_macro_ar_impact <- function(dat) {
-  rt_thr_ERF_df<-dat %>%
-    select(risk_type, threshold, ERF) %>%
-    unique()
   
-  ifelse(nrow(rt_thr_ERF_df) > 1,
-         stop(
-           "Function calc_macro_ar_impact expects a data frame with a single ERF function!",
-           rt_thr_ERF_df
-         ),
-         NA)
-  lzentr_gembez_df<-dat %>%
-    group_by(gemeinde_kennziffer,l_zentral,source) %>%
-    summarise(n=n())
-  ifelse( lzentr_gembez_df$n %>% 
-            max(.) > 1,
-          stop(
-            "Function calc_macro_ar_impact expects a data frame with a single exposure scenario!",
-            lzentr_gembez_df %>% filter(n>1)
-          ),
-          NA)
+  check_exp_single_erf_exp(dat)
+  
   dat %>%
     {
       healthiar::attribute_health(
