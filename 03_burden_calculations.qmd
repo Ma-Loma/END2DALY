@@ -22,6 +22,7 @@ library(purrr)
 #| label: load_shared_util_fkt
 source("scripts/utils.R")
 source("scripts/config.R")
+dir.create("plots", showWarnings = F)
 ```
 
 ## Einführung
@@ -50,7 +51,7 @@ baselineETCHE <-read_delim(
 # Gemeinde- und Kreisnamen laden
 gemeinden_daten <- read_delim(
   PATH_GEMEINDE_KREIS_DATA,
-  delim = ";",
+  delim = ",",
   escape_double = FALSE,
   trim_ws = TRUE
 )
@@ -65,6 +66,29 @@ allExpo <- read_delim(
 
 
 ```
+
+In @fig-plotERFs all ERFs are on display.
+
+```{r}
+#| label: fig-plotERFs
+#| fig-cap: "Overview of all imported ERF."
+functionsETCHE |>
+  # mutate(id = row_number()) |>
+  mutate(data = map(ERF, \(formel)
+                    tibble(
+                      c = 35:85, y = sapply(35:85, \(c) eval(parse(text = formel)))
+                    ))) |>
+  unnest(data) |>
+  ggplot(aes(c, y)) +
+  geom_line(aes(linetype = metric, color = risk_type)) +
+  facet_grid(
+    cols = vars(source),
+    rows = vars(outcome),
+    labeller = labeller(outcome = label_wrap_gen(width = 10))
+  )
+ggsave("plots/all_ERFs.png")
+```
+
 
 ## Expositions- und Gemeindedaten zusammenführen
 
@@ -138,7 +162,7 @@ Um die Umweltbedingte Krankheitslast zu berechnen, braucht healthiar ein datafra
 dat_exp_ERF <- allExpo_w %>%
   mutate(
     source =
-      case_match(
+      replace_values(
         quelle,
         "Straße" ~ "road",
         "Flug" ~ "air",
@@ -159,15 +183,30 @@ Die zusammengeführten Daten haben diese Statistik:
 ```{r}
 #| label: erf_exp_stat
 dat_exp_ERF %>% 
-  group_by(source,datenquelle,kartierungsumfang,outcome) %>% 
-  summarise(AnzBelastetenklassen=n(),Belastete=sum(exponierte)) %>% 
+  summarise(AnzBelastetenklassen=n(),
+            Belastete=sum(exponierte),
+            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>% 
   knitr::kable()
 ```
 
+## Altergruppen verwenden
+Da offensichtlich für die verschiedenen Endpunkte nur jeweils für eine Sub-Population ("children" vs. "adults") gelten sollen, werden hier entsprechend sowohl die Bevölkerungs- als auch die Belastetenzahlen mithilfe der Alters-Fraktionen der jeweiligen Gemeinde berechnet. Dieses Vorgehen muss noch kritisch hinterfragt werden! So wäre zu klären, ob nicht zumindest manche Endpunkte auch eine größere Bevölkerung in Risiko setzen.
+
+```{r}
+#| label: adjust_age_fractions
+
+
+dat_exp_ERF %>% 
+  multiply_with_age_fraction(.) %>% 
+  summarise(AnzBelastetenklassen=n(),
+            Belastete=sum(exponierte),
+            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>% 
+  knitr::kable()
+```
 
 ## Gesundheitsauswirkungen für verschiedene Lärmquellen berechnen
 
-Hier beispielshaft für einige Gesundheitsauswirkungen, zunächst die für "absolutes Risiko": HA, HSD, Leseverständnis.
+Hier beispielhaft für einige Gesundheitsauswirkungen, zunächst die für "absolutes Risiko": HA, HSD, Leseverständnis.
 
 ```{r function_all_ar_res}
 
@@ -205,7 +244,9 @@ datEEA_all <- dat_exp_ERF %>%
   filter(datenquelle == "EEA",
          kartierungsumfang == "all")
 
-resEEA_all<-all_ar_res(datEEA_all)
+resEEA_all<-datEEA_all %>% 
+  multiply_with_age_fraction() %>% 
+  all_ar_res()
 
 datBundesland_major <- dat_exp_ERF %>%
   filter(datenquelle == "Bundesland",
@@ -219,12 +260,10 @@ resBundesland_major<-all_ar_res(datBundesland_major)
 Lärmbelastung in Hessen nach Kreisen
 
 ```{r plot-exposure-hessen}
-dir.create("plots", showWarnings = F)
-
 allExpo_w %>%
   mutate(Bundesland_Code=str_sub(gemeinde_kennziffer,1,2)) %>% 
   filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
-  ggplot(aes(x = l_untergrenze, y = exponierte, fill = Kreis_Name.x)) +
+  ggplot(aes(x = l_untergrenze, y = exponierte, fill = kreis_name)) +
   geom_col() +
   facet_grid(rows=vars(metrik),cols=vars(datenquelle,quelle,kartierungsumfang)) +
   labs(
@@ -239,7 +278,9 @@ ggsave("plots/exposition_hessen.png", width = 12, height = 8)
 
 ## Gesundheitsauswirkungen in Regionen
 
-```{r plot-ballubgsraeume}
+```{r}
+#| label: fig-ballubgsraeume
+#| figure-caption: "Zu beachten ist der ungeklärte Umgang mit den Altersgruppen"
 bundesland_daten <- read_delim(
   PATH_BUNDESLAND_DATA,
   delim = ";",
@@ -288,7 +329,7 @@ kagzrm_kreise <- read_delim(
   escape_double = FALSE,
   trim_ws = TRUE
 ) %>% 
-  mutate(Kreis_Code=as.character(Kreis_Code))
+  mutate(kreis_code=as.character(kreis_code))
 
 res_KAGZRM_gem <-
   resBundesland_major %>%
@@ -299,7 +340,7 @@ res_KAGZRM_gem <-
 res_KAGZRM_kr <-
   resBundesland_major %>%
   left_join(gemeinden_daten, by = join_by(geo_id_micro == gemeinde_kennziffer)) %>%
-  semi_join(kagzrm_kreise, by = c("Bundesland_Code", "Kreis_Code"))
+  semi_join(kagzrm_kreise, by = c("bundesland_code", "kreis_code"))
 
 res_KAGZRM<-
   bind_rows(res_KAGZRM_gem,
@@ -307,7 +348,7 @@ res_KAGZRM<-
   unique()
 
 res_KAGZRM %>%
-  ggplot(aes(x = outcome, fill = Kreis_Name , y = impact)) +
+  ggplot(aes(x = outcome, fill = kreis_name , y = impact)) +
   geom_col() +
   labs(title = "Umgebungslärmbedingte Krankheitslast errechnet aus \nULR-Straßenlärmbelastetenzahlen", x = "Endpunkt", y = "Attributable Krankheitslast [DALY]") +
   #guides(fill = guide_legend(title = "Kreis"))+
@@ -315,8 +356,7 @@ res_KAGZRM %>%
   theme_gray(base_size = 15) +
   facet_grid(rows = vars(source),
              cols = vars(kartierungsumfang))
-
-
+ggsave("plots/allKAGZRM_major.png")
 ```
 
 

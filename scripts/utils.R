@@ -229,55 +229,117 @@ validate_exposure_data <- function(data) {
   invisible(data)
 }
 
-extract_kreise_gemeinden <- function(lines) {
+#' Extract data concerning kreise from a large fixed format file
+#'
+#' @param lines imported via read_lines
+#'
+#' @returns kreise_data a data frame
+#' @export
+#'
+#' @examples
+extract_kreise <- function(lines) {
   kreise_data <- data.frame(
-    Kreis_Code = character(),
-    Kreis_Name = character(),
-    stringsAsFactors = FALSE
-  )
-  gemeinden_data <- data.frame(
-    Gemeindekennziffer = character(),
-    Gemeinde_Name = character(),
+    bundesland_code = character(),
+    kreis_code = character(),
+    kreis_name = character(),
     stringsAsFactors = FALSE
   )
   
   for (line in lines) {
     if (startsWith(line, "40")) {
       #Zeilen, in denen Kreisdaten stehen ("Satzart 40")
-      bl_code <- substr(line, 11, 12)
-      kreis_code <- substr(line, 13, 15)
-      kreis_name <- substr(line, 23, 72)
-      kreis_name <- gsub("\\s+$", "", gsub("^\\s+", "", kreis_name))
       kreise_data <- rbind(
         kreise_data,
         data.frame(
-          Bundesland_Code = bl_code,
-          Kreis_Code = kreis_code,
-          Kreis_Name = kreis_name,
-          stringsAsFactors = FALSE
-        )
-      )
-    } else if (startsWith(line, "60")) {
-      #Zeilen, in denen Gemeindedaten stehen ("Satzart 60")
-      gkz_lang <- substr(line, 11, 19)
-      gkz_kurz <- substr(line, 13, 19)
-      bl_code <- substr(line, 11, 12)
-      kreis_code <- substr(line, 13, 15)
-      gemeinde_name <- substr(line, 23, 72)
-      gemeinde_name <- gsub("\\s+$", "", gsub("^\\s+", "", gemeinde_name))
-      gemeinden_data <- rbind(
-        gemeinden_data,
-        data.frame(
-          Gemeindekennziffer_lang = gkz_lang,
-          Gemeindekennziffer_kurz = gkz_kurz,
-          Bundesland_Code = bl_code,
-          Kreis_Code = kreis_code,
-          Gemeinde_Name = gemeinde_name,
+          bundesland_code = substr(line, 11, 12),
+          kreis_code = substr(line, 13, 15),
+          kreis_name = substr(line, 23, 72),# %>%gsub("\\s+$", "", gsub("^\\s+", "", .)),
           stringsAsFactors = FALSE
         )
       )
     }
   }
   
-  return(list(kreise = kreise_data, gemeinden = gemeinden_data))
+  return(kreise_data)
+}
+
+
+#' Extract data concerning gemeinden from a large fixed format file
+#'
+#' @param lines 
+#'
+#' @returns gemeinden_data a dataframe
+#' @export
+#'
+#' @examples
+extract_gemeinden <- function(lines) {
+  gemeinden_data <- data.frame(
+    gemeinde_kennziffer   = character(),
+    gemeinde_bezeichnung   = character(),
+    gemeinde_kennzeichnung = character(),
+    bevoelkerung      = numeric(),
+    flaeche = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  for (line in lines) {
+    if (startsWith(line, "60")) {
+      #Zeilen, in denen Gemeindedaten stehen ("Satzart 60")
+      gemeinden_data <- rbind(
+        gemeinden_data,
+        data.frame(
+          gemeinde_kennziffer   = substr(line, 11, 18),
+          gemeinde_bezeichnung   = substr(line, 23, 72),
+          gemeinde_kennzeichnung = substr(line, 123, 124),
+          bevoelkerung      = substr(line, 140, 150) %>% as.numeric(),
+          flaeche = substr(line, 129, 139) %>% as.numeric(),
+          stringsAsFactors = FALSE
+        )
+      )
+    }
+  }
+  
+  gemeinden_data <- gemeinden_data %>%
+    mutate(
+      gemeinde_kennzeichnung = replace_values(
+        gemeinde_kennzeichnung,
+        "60" ~ "Markt",
+        "61" ~ "Kreisfreie Stadt",
+        "62" ~ "Stadtkreis",
+        "63" ~ "Stadt",
+        "64" ~ "Kreisangehörige Gemeinde",
+        "65" ~ "gemeindefreies Gebiet, bewohnt",
+        "66" ~ "gemeindefreies Gebiet, unbewohnt",
+        "67" ~ "große Kreisstadt"
+      )
+    ) %>%
+    mutate(gemeinde_bezeichnung = str_squish(gemeinde_bezeichnung)) 
+  return(gemeinden_data)
+}
+
+
+#' Use given age fractions to reduce both exposed and population in each row
+#'
+#' @param dat data frame with population, exposed and fractions
+#'
+#' @returns same data frame with population, exposed and fractions multiplied
+#' @export
+#'
+#' @examples multiply_with_age_fraction(dat_exp_ERF)
+multiply_with_age_fraction <- function(dat){
+  dat |>
+    mutate(
+      exponierte =
+        replace_when(
+          exponierte,
+          population_type %in% c("adults") ~ exponierte * fraction_adults_from_18_years,
+          population_type %in% c("children") ~ exponierte * fraction_children_7_17_years
+        ),
+      bevoelkerung =
+        replace_when(
+          bevoelkerung,
+          population_type %in% c("adults") ~ bevoelkerung * fraction_adults_from_18_years,
+          population_type %in% c("children") ~ bevoelkerung * fraction_children_7_17_years
+        )
+    )
 }

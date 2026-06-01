@@ -1,4 +1,4 @@
-Bundesland_Code;Kreis_Code;Kreis_Name
+bundesland_code;kreis_code;kreis_name
 "06";"432";Darmstadt-Dieburg
 "06";"433";Groß-Gerau
 "06";"436";Main-Taunus-Kreis
