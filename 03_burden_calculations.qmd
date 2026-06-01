@@ -140,8 +140,6 @@ Da offensichtlich für die verschiedenen Endpunkte nur jeweils für eine Sub-Pop
 
 ```{r}
 #| label: adjust_age_fractions
-
-
 dat_exp_ERF %>% 
   multiply_with_age_fraction(.) %>% 
   summarise(AnzBelastetenklassen=n(),

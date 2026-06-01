@@ -385,16 +385,18 @@ calc_macro_ar_impact <- function(dat) {
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$Bundesland_Code,
         dw_central = .$DW,
-        duration_central = 1
+        duration_central = 1,
+        info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
       )
     } %>%
     .$health_detailed %>%
     .$results_raw %>%
     mutate(
-      source = dat$source[1],
-      metric = dat$metric[1],
-      outcome = dat$outcome[1],
-      datenquelle = dat$datenquelle[1],
-      kartierungsumfang=dat$kartierungsumfang[1]
+      source = info_column_1,
+      metric = info_column_2,
+      outcome = info_column_3,
+      datenquelle = info_column_4,
+      kartierungsumfang=info_column_5,
+      .keep="unused"
     )
 }
