@@ -46,7 +46,8 @@ baselineETCHE <-read_delim(
   delim = ";",
   escape_double = FALSE,
   trim_ws = TRUE
-)
+)|>
+  pivot_longer(-Country,names_sep = "_",names_to = c("endpoint","unit"))
 
 # Gemeinde- und Kreisnamen laden
 gemeinden_daten <- read_delim(

@@ -1,4 +1,4 @@
-Country;All-cause mortality rate;All-cause YLL;IHD Incidence rate;IHD YLD;CVD Incidence rate;CVD YLD;Diabetes Type 2 Incidence rate;Diabetes Type 2 YLD
+Country;All-cause mortality_rate;All-cause_YLL;IHD_Incidence rate;IHD_YLD;CVD_Incidence rate;CVD_YLD;Diabetes Type 2_Incidence rate;Diabetes Type 2_YLD
 AT;0.0108923;0.1733343;0.005052676;0.001302929;0.0170370;0.0103839;0.0023304;0.0042803
 BE;0.0114245;0.1802973;0.004336241;0.000947247;0.0135252;0.0074783;0.0033524;0.0072834
 BG;0.0210833;0.3962438;0.010492404;0.001593945;0.0211962;0.0102113;0.0050633;0.0109138
