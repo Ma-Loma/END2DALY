@@ -354,26 +354,24 @@ multiply_with_age_fraction <- function(dat){
 #'
 #' @examples
 check_exp_single_erf_exp <- function(dat) {
-  rt_thr_ERF_df<-dat %>%
+  rt_thr_ERF_df <- dat %>%
     select(risk_type, threshold, ERF) %>%
     unique()
   
-  ifelse(nrow(rt_thr_ERF_df) > 1,
-         stop(
-           "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single ERF function!",
-           rt_thr_ERF_df
-         ),
-         NA)
-  lzentr_gembez_df<-dat %>%
-    group_by(gemeinde_kennziffer,l_zentral,source) %>%
-    summarise(n=n())
-  ifelse( lzentr_gembez_df$n %>% 
-            max(.) > 1,
-          stop(
-            "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single exposure scenario!",
-            lzentr_gembez_df %>% filter(n>1)
-          ),
-          NA)
+  ifelse(nrow(rt_thr_ERF_df) > 1, stop(
+    "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single ERF function!",
+    rt_thr_ERF_df
+  ), NA)
+  lzentr_gembez_df <- dat %>%
+    summarise(n = n(),
+              .by = c(gemeinde_kennziffer,
+                      l_zentral,
+                      source))
+  ifelse(lzentr_gembez_df$n %>%
+           max(.) > 1, stop(
+             "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single exposure scenario!",
+             lzentr_gembez_df %>% filter(n > 1)
+           ), NA)
 }
 
 #' Calculate impact of absolute risk endpoints
@@ -401,7 +399,7 @@ calc_macro_ar_impact <- function(dat) {
         cutoff_central = first(.$threshold),
         erf_eq_central = first(.$ERF),
         geo_id_micro = .$gemeinde_kennziffer,
-        geo_id_macro = .$Bundesland_Code,
+        geo_id_macro = .$bundesland_code,
         dw_central = .$DW,
         duration_central = 1,
         info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
@@ -421,7 +419,7 @@ calc_macro_ar_impact <- function(dat) {
 
 #' Calculate impact of relative risk endpoints
 #'
-#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,Bundesland_Code,DW
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,bundesland_code,DW
 #'
 #' @returns a dataframe with detailed infos of input and outcome
 #' @export
@@ -439,14 +437,15 @@ calc_macro_rr_impact <- function(dat) {
     {
       healthiar::attribute_health(
         approach_risk = "relative_risk",
-        pop_exp = .$exponierte,
+        prop_pop_exp = .$exponierte/.$bevoelkerung,
+        population = .$bevoelkerung,
         exp_central = .$l_zentral,
         cutoff_central = first(.$threshold),
         erf_eq_central = first(.$ERF),
         bhd_central = .$bhd,
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
-        dw_central = .$DW,
+        #dw_central = .$DW,
         duration_central = 1,
         info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
       )

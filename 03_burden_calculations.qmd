@@ -2,6 +2,7 @@
 title: "Krankheitslast durch Umgebungslärm in Deutschland"
 author: "Matthias Lochmann"
 format: pptx
+bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -27,7 +28,19 @@ dir.create("plots", showWarnings = F)
 
 ## Einführung
 
-Dieses Dokument analysiert die Lärmbelastung in Hessen und berechnet die damit verbundenen Gesundheitsauswirkungen. Die Analyse basiert auf Daten des HLNUG und ETCHE-Funktionen.
+Dieses Dokument analysiert die Lärmbelastung in Hessen und berechnet die damit verbundenen Gesundheitsauswirkungen. Die Analyse basiert auf Lärmexpositionsdaten
+
+- hessischen Daten des HLNUG
+
+- Landesdaten anderer Landesämter
+
+- gesamteuropäischen Lärmexpositionsdaten aus EIONET
+
+sowie
+
+- Expositions-Wirkungsfunktionen sowie "Baseline-health data" aus [@engelmann2025a] und [@engelmann2025]
+
+- 
 
 ## Daten laden und vorbereiten
 
@@ -52,6 +65,21 @@ baselineETCHE <- read_delim(
                names_to = c("outcome", "baseline_unit"),
                values_to = "bhd")
 
+baselineETCHE24 <- read_delim(
+  "data/ETCHE24/table_10_2.csv",
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+) |>
+  pivot_longer(
+    -iso_code,
+    names_sep = "_",
+    names_to = c("outcome", "agegroup"),
+    values_to = "bhd"
+  ) |>
+  summarise(bhd = mean(bhd), .by = c(iso_code, outcome)) |>
+  mutate(baseline_unit = "YLD")
+
 # Gemeinde- und Kreisnamen laden
 gemeinden_daten <- read_delim(
   PATH_GEMEINDE_KREIS_DATA,
@@ -59,6 +87,10 @@ gemeinden_daten <- read_delim(
   escape_double = FALSE,
   trim_ws = TRUE
 )
+
+baselineETCHE<-
+  baselineETCHE|>
+  bind_rows(baselineETCHE24)
 
 allExpo <- read_delim(
   PATH_ALLEXPO_DATA,
@@ -91,7 +123,6 @@ functionsETCHE |>
   )
 ggsave("plots/all_ERFs.png")
 ```
-
 
 ## Expositions- und Gemeindedaten zusammenführen
 
@@ -138,11 +169,13 @@ Die zusammengeführten Daten haben diese Statistik:
 dat_exp_ERF %>% 
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
-            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>% 
+            bhd=first(bhd),
+            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>%
   knitr::kable()
 ```
 
 ## Altergruppen verwenden
+
 Da offensichtlich für die verschiedenen Endpunkte nur jeweils für eine Sub-Population ("children" vs. "adults") gelten sollen, werden hier entsprechend sowohl die Bevölkerungs- als auch die Belastetenzahlen mithilfe der Alters-Fraktionen der jeweiligen Gemeinde berechnet. Dieses Vorgehen muss noch kritisch hinterfragt werden! So wäre zu klären, ob nicht zumindest manche Endpunkte auch eine größere Bevölkerung in Risiko setzen.
 
 ```{r}
@@ -161,33 +194,62 @@ Hier beispielhaft für einige Gesundheitsauswirkungen, zunächst die für "absol
 
 ```{r function_all_ar_res}
 
-all_ar_res <- function(dat) {
+all_ar_res <- function(dat)
+{
   outc_sourc_metr_liste <- dat %>%
     filter(risk_type == "absolute_risk") %>%
-    select(outcome, source, metric) %>%
+    select(outcome, source, metric, bhd) %>%
     unique()
   
   print("hier wird diese Outcome-Liste berücksichtigt:")
   print(outc_sourc_metr_liste)
-  outcome_all <- NULL
+  outcome_ar <- NULL
   
   # Basic for loop iteration
   for (i in 1:nrow(outc_sourc_metr_liste)) {
     zeile <- outc_sourc_metr_liste[i, ]
     print("Nun Kombi:")
     print(zeile)
-    outcome_all<-dat %>%
+    osm <- dat %>%
       filter(outcome == zeile$outcome,
              source == zeile$source,
-             metric == zeile$metric) %>%
-      calc_macro_ar_impact(.) %>%
-      rbind(outcome_all)# Assuming this function returns a data frame
+             metric == zeile$metric)
+    outcome_ar <-
+      calc_macro_ar_impact(osm) %>%
+      rbind(outcome_ar)# Assuming this function returns a data frame
   }
-  return(outcome_all)
+  return(outcome_ar)
 }
+
+all_rr_res <- function(dat)
+{
+  outc_sourc_metr_liste <- dat %>%
+    filter(risk_type == "relative_risk") %>%
+    filter(!is.na(bhd)) %>% #bhd is needed in calc_macro_rr_impact; better error handling would be nice: throw warning, return line with NA in certain datafield and continue
+    select(outcome, source, metric, bhd) %>%
+    unique()
+  
+  print("hier wird diese Outcome-Liste berücksichtigt:")
+  print(outc_sourc_metr_liste)
+  outcome_rr <- NULL
+  
+  # Basic for loop iteration
+  for (i in 1:nrow(outc_sourc_metr_liste)) {
+    zeile <- outc_sourc_metr_liste[i, ]
+    print("Nun Kombi:")
+    print(zeile)
+    osm <- dat %>%
+      filter(outcome == zeile$outcome,
+             source == zeile$source,
+             metric == zeile$metric)
+    outcome_rr <-
+      calc_macro_rr_impact(osm) %>%
+      rbind(outcome_rr)# Assuming this function returns a data frame
+  }
+  return(outcome_rr)
+}
+
 ```
-
-
 
 ```{r health-impacts-road-air}
 
@@ -195,9 +257,18 @@ datEEA_all <- dat_exp_ERF %>%
   filter(datenquelle == "EEA",
          kartierungsumfang == "all")
 
-resEEA_all<-datEEA_all %>% 
+resEEA_ar<-datEEA_all %>% 
   multiply_with_age_fraction() %>% 
   all_ar_res()
+
+resEEA_rr<-datEEA_all |>
+  multiply_with_age_fraction() |>
+  all_rr_res()
+
+
+setdiff(names(resEEA_rr),names(resEEA_ar))
+
+all_res<-bind_rows(resEEA_rr,resEEA_ar)
 
 datBundesland_major <- dat_exp_ERF %>%
   filter(datenquelle == "Bundesland",
@@ -212,8 +283,8 @@ Lärmbelastung in Hessen nach Kreisen
 
 ```{r plot-exposure-hessen}
 allExpo_w %>%
-  mutate(Bundesland_Code=str_sub(gemeinde_kennziffer,1,2)) %>% 
-  filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
+  mutate(bundesland_code=str_sub(gemeinde_kennziffer,1,2)) %>% 
+  filter(bundesland_code==HESSEN_BUNDESLAND_CODE) %>% 
   ggplot(aes(x = l_untergrenze, y = exponierte, fill = kreis_name)) +
   geom_col() +
   facet_grid(rows=vars(metrik),cols=vars(datenquelle,quelle,kartierungsumfang)) +
@@ -259,7 +330,6 @@ resEEA_all %>%
 ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
 #ggsave("plots/DALY_Bundesländer_major.png", width = 12, height = 8,dpi=200)
 ```
-
 
 ```{r}
 #| label: plotKAGZRM_burden
@@ -310,11 +380,9 @@ res_KAGZRM %>%
 ggsave("plots/allKAGZRM_major.png")
 ```
 
-
 ```{r}
 #| label: alleEEAresult
 resEEA_all %>% 
   group_by(outcome) %>% 
   summarize(DALY=sum(impact))
 ```
-
