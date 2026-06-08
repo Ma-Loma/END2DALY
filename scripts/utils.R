@@ -448,7 +448,7 @@ calc_macro_rr_impact <- function(dat) {
       healthiar::attribute_health(
         approach_risk = "relative_risk",
         bhd_central = first(.$bhd) * .$bevoelkerung,
-        prop_pop_exp = .$exponierte/.$bevoelkerung,
+        prop_pop_exp = if_else(.$bevoelkerung>0,.$exponierte/.$bevoelkerung,0),
         #pop_exp = 1,
         exp_central = .$l_zentral,
         cutoff_central = 0,#as for "relative_risk" this also shifts the ERF
