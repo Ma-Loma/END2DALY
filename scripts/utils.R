@@ -395,7 +395,7 @@ calc_macro_ar_impact <- function(dat) {
         approach_risk = "absolute_risk",
         pop_exp = .$exponierte,
         exp_central = .$l_zentral,
-        erf_eq_central = first(.$ERF),
+        erf_eq_central = paste0(first(.$ERF),"*100"),
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
         dw_central = .$DW,
@@ -416,6 +416,60 @@ calc_macro_ar_impact <- function(dat) {
 }
 
 
+#' Calculate impact of relative risk endpoints
+#'
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte, l_zentral, gemeinde_kennziffer, bundesland_code, DW
+#'
+#' @return a dataframe with detailed infos of input and outcome
+#' @export
+#'
+#' @details Similar to calc_macro_ar_impact but for relative_risk approach.
+#' Passes metadata through the info field.
+#'
+calc_macro_rr_impact <- function(dat) {
+  rt_thr_ERF_df <- dat %>%
+    select(risk_type, threshold, ERF) %>%
+    unique()
+  
+  if (nrow(rt_thr_ERF_df) > 1) {
+    stop("Function calc_macro_rr_impact expects a data frame with a single ERF function!")
+  }
+  
+  lzentr_gembez_df <- dat %>%
+    group_by(gemeinde_kennziffer, l_zentral, source) %>%
+    summarise(n = n(), .groups = "drop")
+  
+  if (max(lzentr_gembez_df$n) > 1) {
+    stop("Function calc_macro_rr_impact expects a data frame with a single exposure scenario!")
+  }
+  
+  dat %>%
+    {
+      healthiar::attribute_health(
+        approach_risk = "relative_risk",
+        bhd_central = first(.$bhd) * .$bevoelkerung,
+        prop_pop_exp = .$exponierte/.$bevoelkerung,
+        #pop_exp = 1,
+        exp_central = .$l_zentral,
+        cutoff_central = 0,#as for "relative_risk" this also shifts the ERF
+        erf_eq_central = first(.$ERF),
+        geo_id_micro = .$gemeinde_kennziffer,
+        geo_id_macro = .$bundesland_code,
+        duration_central = 1,
+        info = select(., source, metric, outcome, datenquelle, kartierungsumfang)
+      )
+    } %>%
+    .$health_detailed %>%
+    .$results_raw %>%
+    mutate(
+      source = info_column_1,
+      metric = info_column_2,
+      outcome = info_column_3,
+      datenquelle = info_column_4,
+      kartierungsumfang = info_column_5,
+      .keep = "unused"
+    )
+}
 
 #' Calculate health impact for any risk approach
 #'
@@ -462,7 +516,7 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
       outcome_all <- bind_rows(outcome_all, calc_macro_ar_impact(dat_subset))
     }
     else if (any(is.na(dat_subset$bhd))) {
-      warning("skipped, as at least one bhd is NA: ",
+      warning(zeile$outcome,zeile$source,zeile$metric," skipped, as at least one bhd is NA: ",
               paste(unique(dat_subset$bhd), collapse = ", "))
     }
     else if (risk_approach == "relative_risk") {
@@ -474,59 +528,6 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
 }
 
 
-#' Calculate impact of relative risk endpoints
-#'
-#' @param dat a dataframe with risk_type, threshold, ERF, exponierte, l_zentral, gemeinde_kennziffer, bundesland_code, DW
-#'
-#' @return a dataframe with detailed infos of input and outcome
-#' @export
-#'
-#' @details Similar to calc_macro_ar_impact but for relative_risk approach.
-#' Passes metadata through the info field.
-#'
-calc_macro_rr_impact <- function(dat) {
-  rt_thr_ERF_df <- dat %>%
-    select(risk_type, threshold, ERF) %>%
-    unique()
-  
-  if (nrow(rt_thr_ERF_df) > 1) {
-    stop("Function calc_macro_rr_impact expects a data frame with a single ERF function!")
-  }
-  
-  lzentr_gembez_df <- dat %>%
-    group_by(gemeinde_kennziffer, l_zentral, source) %>%
-    summarise(n = n(), .groups = "drop")
-  
-  if (max(lzentr_gembez_df$n) > 1) {
-    stop("Function calc_macro_rr_impact expects a data frame with a single exposure scenario!")
-  }
-  
-  dat %>%
-    {
-      healthiar::attribute_health(
-        approach_risk = "relative_risk",
-        bhd_central = first(.$bhd),
-        prop_pop_exp = .$exponierte/.$bevoelkerung,
-        exp_central = .$l_zentral,
-        cutoff_central = first(.$threshold),
-        erf_eq_central = first(.$ERF),
-        geo_id_micro = .$gemeinde_kennziffer,
-        geo_id_macro = .$bundesland_code,
-        duration_central = 1,
-        info = select(., source, metric, outcome, datenquelle, kartierungsumfang)
-      )
-    } %>%
-    .$health_detailed %>%
-    .$results_raw %>%
-    mutate(
-      source = info_column_1,
-      metric = info_column_2,
-      outcome = info_column_3,
-      datenquelle = info_column_4,
-      kartierungsumfang = info_column_5,
-      .keep = "unused"
-    )
-}
 
 #' Standardize health impact output format
 #'

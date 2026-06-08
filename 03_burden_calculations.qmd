@@ -281,18 +281,11 @@ resEEA_rr <- datEEA_all %>%
   calc_health_impact(risk_approach = "relative_risk")
 
 # Merge by selecting only common columns
-resEEA_all <- bind_rows(
-  resEEA_ar,
-  resEEA_rr
-) %>%
-  # Optional: add risk_approach column for filtering later
-  mutate(
-    risk_approach = case_when(
-      # You may need to infer this from the data if it's not preserved
-      !is.na(impact) ~ "unknown"  # Adjust based on actual column differences
-    ),
-    .after = outcome
-  )
+resEEA_all <- resEEA_ar |>
+  mutate(prop_pop_exp = as.character(prop_pop_exp)) |>
+  mutate(exp_category = as.character(exp_category)) |>
+  mutate(exp = as.character(exp)) |>
+  bind_rows(resEEA_rr) 
 
 datBundesland_major <- dat_exp_ERF %>%
   filter(datenquelle == "Bundesland",
@@ -357,7 +350,7 @@ resEEA_all %>%
     y = "Attributable Krankheitslast [DALY]"
   ) +
   guides(fill = guide_legend(title = "Bundesland"))+
-  scale_y_continuous(breaks = NULL)+
+ # scale_y_continuous(breaks = NULL)+
     theme_gray(base_size = 15)
 
 ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
@@ -417,5 +410,5 @@ ggsave("plots/allKAGZRM_major.png")
 #| label: alleEEAresult
 resEEA_all %>% 
   group_by(outcome) %>% 
-  summarize(DALY=sum(impact))
+  summarize(DALY=sum(impact,na.rm = TRUE))
 ```
