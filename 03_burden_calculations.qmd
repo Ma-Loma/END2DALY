@@ -52,7 +52,8 @@ functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx") %>%
   mutate(
     ERF = str_replace_all(ERF, "threshold", as.character(threshold)),
     DW = as.numeric(DW)
-  )
+  ) |>
+  filter(ETCHE23_model==1|END_model == 1)
 
 baselineETCHE <- read_delim(
   "data/ETCHE/table_10_1.csv",
@@ -273,11 +274,11 @@ datEEA_all <- dat_exp_ERF %>%
 
 # Calculate both absolute and relative risk
 resEEA_ar <- datEEA_all %>% 
-  multiply_with_age_fraction() %>% 
+#  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "absolute_risk")
 
 resEEA_rr <- datEEA_all %>% 
-  multiply_with_age_fraction() %>% 
+#  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "relative_risk")
 
 # Merge by selecting only common columns
@@ -292,14 +293,18 @@ datBundesland_major <- dat_exp_ERF %>%
          kartierungsumfang == "major")
 
 resBundesland_ar <- datBundesland_major %>%
-  multiply_with_age_fraction() %>% 
+#  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "absolute_risk")
 
 resBundesland_rr <- datBundesland_major %>%
-  multiply_with_age_fraction() %>% 
+#  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "relative_risk")
 
-resBundesland_all <- bind_rows(resBundesland_ar, resBundesland_rr)
+resBundesland_all <- resBundesland_ar |>
+  mutate(prop_pop_exp = as.character(prop_pop_exp)) |>
+  mutate(exp_category = as.character(exp_category)) |>
+  mutate(exp = as.character(exp)) |>
+  bind_rows(resBundesland_rr)
 
 
 ```
@@ -345,13 +350,15 @@ resEEA_all %>%
   # facet_grid(rows = vars(metric, outcome),
   #            cols = vars(kartierungsumfang)) +
   labs(
-    title = "Lärm-bedingte Krankheitslast errechnet aus \nULR-Straßenlärmbelastetenzahlen in den Ballungsräumen",
+    title = "Lärmbedingte Krankheitslast errechnet aus \nULR-Belastetenzahlen in den Ballungsräumen",
     x = "Endpunkt",
     y = "Attributable Krankheitslast [DALY]"
   ) +
+  facet_grid(cols=vars(source))+
   guides(fill = guide_legend(title = "Bundesland"))+
  # scale_y_continuous(breaks = NULL)+
-    theme_gray(base_size = 15)
+    theme_gray(base_size = 15)+
+  theme(axis.text.x = element_text(angle = 90))
 
 ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
 #ggsave("plots/DALY_Bundesländer_major.png", width = 12, height = 8,dpi=200)
@@ -409,6 +416,8 @@ ggsave("plots/allKAGZRM_major.png")
 ```{r}
 #| label: alleEEAresult
 resEEA_all %>% 
-  group_by(outcome) %>% 
-  summarize(DALY=sum(impact,na.rm = TRUE))
+  group_by(source,outcome) %>% 
+  summarize(DALY=sum(impact,na.rm = TRUE),
+            avg_paf=mean(pop_fraction,na.rm = TRUE)) %>% 
+  knitr::kable(format="simple")
 ```
