@@ -344,7 +344,6 @@ multiply_with_age_fraction <- function(dat){
     )
 }
 
-
 #' Helper function to check 
 #'
 #' @param dat 
@@ -376,7 +375,7 @@ check_exp_single_erf_exp <- function(dat) {
 
 #' Calculate impact of absolute risk endpoints
 #'
-#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,Bundesland_Code,DW
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,bundesland_code,DW
 #'
 #' @returns a dataframe with detailed infos of input and outcome
 #' @export
@@ -396,7 +395,6 @@ calc_macro_ar_impact <- function(dat) {
         approach_risk = "absolute_risk",
         pop_exp = .$exponierte,
         exp_central = .$l_zentral,
-        cutoff_central = first(.$threshold),
         erf_eq_central = first(.$ERF),
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
@@ -417,37 +415,105 @@ calc_macro_ar_impact <- function(dat) {
     )
 }
 
-#' Calculate impact of relative risk endpoints
+
+
+#' Calculate health impact for any risk approach
 #'
-#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,bundesland_code,DW
+#' @param dat data frame with exposure and ERF data
+#' @param risk_approach Character: "absolute_risk" or "relative_risk"
 #'
-#' @returns a dataframe with detailed infos of input and outcome
+#' @return data frame with health impact results
 #' @export
 #'
-#' @details checks data (single exposure scenario and single ERF)
-#' then passes it to healthiar::attribute_health.
-#' The information of source,metric,outcome,datenquelle,kartierungsumfang is piped through using the info field.
-#' 
 #' @examples
-calc_macro_rr_impact <- function(dat) {
+#' calc_health_impact(dat, risk_approach = "absolute_risk")
+#'
+calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
+  # Validate risk_approach
+  if (!risk_approach %in% c("absolute_risk", "relative_risk")) {
+    stop("risk_approach must be 'absolute_risk' or 'relative_risk'",
+         call. = FALSE)
+  }
   
-  check_exp_single_erf_exp(dat)
+  outc_sourc_metr_liste <- dat %>%
+    filter(risk_type == risk_approach) %>%
+    select(outcome, source, metric) %>%
+    unique()
+  
+  if (nrow(outc_sourc_metr_liste) == 0) {
+    warning("No combinations found for risk_approach = '",
+            risk_approach,
+            "'")
+    return(NULL)
+  }
+  
+  outcome_all <- NULL
+  
+  for (i in 1:nrow(outc_sourc_metr_liste)) {
+    zeile <- outc_sourc_metr_liste[i, ]
+    print(zeile)
+    dat_subset <- dat %>%
+      filter(outcome == zeile$outcome,
+             source == zeile$source,
+             metric == zeile$metric)
+    
+    # Call appropriate calc function based on risk_approach
+    if (risk_approach == "absolute_risk") {
+      outcome_all <- bind_rows(outcome_all, calc_macro_ar_impact(dat_subset))
+    }
+    else if (any(is.na(dat_subset$bhd))) {
+      warning("skipped, as at least one bhd is NA: ",
+              paste(unique(dat_subset$bhd), collapse = ", "))
+    }
+    else if (risk_approach == "relative_risk") {
+      outcome_all <- bind_rows(outcome_all, calc_macro_rr_impact(dat_subset))
+    }
+  }
+  
+  return(outcome_all)
+}
+
+
+#' Calculate impact of relative risk endpoints
+#'
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte, l_zentral, gemeinde_kennziffer, bundesland_code, DW
+#'
+#' @return a dataframe with detailed infos of input and outcome
+#' @export
+#'
+#' @details Similar to calc_macro_ar_impact but for relative_risk approach.
+#' Passes metadata through the info field.
+#'
+calc_macro_rr_impact <- function(dat) {
+  rt_thr_ERF_df <- dat %>%
+    select(risk_type, threshold, ERF) %>%
+    unique()
+  
+  if (nrow(rt_thr_ERF_df) > 1) {
+    stop("Function calc_macro_rr_impact expects a data frame with a single ERF function!")
+  }
+  
+  lzentr_gembez_df <- dat %>%
+    group_by(gemeinde_kennziffer, l_zentral, source) %>%
+    summarise(n = n(), .groups = "drop")
+  
+  if (max(lzentr_gembez_df$n) > 1) {
+    stop("Function calc_macro_rr_impact expects a data frame with a single exposure scenario!")
+  }
   
   dat %>%
     {
       healthiar::attribute_health(
         approach_risk = "relative_risk",
+        bhd_central = first(.$bhd),
         prop_pop_exp = .$exponierte/.$bevoelkerung,
-        population = .$bevoelkerung,
         exp_central = .$l_zentral,
         cutoff_central = first(.$threshold),
         erf_eq_central = first(.$ERF),
-        bhd_central = .$bhd,
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
-        #dw_central = .$DW,
         duration_central = 1,
-        info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
+        info = select(., source, metric, outcome, datenquelle, kartierungsumfang)
       )
     } %>%
     .$health_detailed %>%
@@ -457,7 +523,29 @@ calc_macro_rr_impact <- function(dat) {
       metric = info_column_2,
       outcome = info_column_3,
       datenquelle = info_column_4,
-      kartierungsumfang=info_column_5,
-      .keep="unused"
+      kartierungsumfang = info_column_5,
+      .keep = "unused"
     )
+}
+
+#' Standardize health impact output format
+#'
+#' Ensures consistent data structure across absolute_risk and relative_risk results.
+#'
+#' @param result_list A list of data frames from calc_macro_*_impact functions
+#'
+#' @return A unified data frame with consistent columns
+#' @export
+#'
+#' @details
+#' The healthiar package returns different column structures for absolute vs relative risk.
+#' This function ensures both approaches return the same columns (selecting common ones).
+#'
+standardize_health_results <- function(result_list) {
+  # Get common columns across all results
+  common_cols <- Reduce(intersect, lapply(result_list, names))
+  
+  result_list %>%
+    map_df(~ select(., all_of(common_cols))) %>%
+    return()
 }
