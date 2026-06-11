@@ -349,18 +349,23 @@ resEEA_all %>%
   geom_col() +
   # facet_grid(rows = vars(metric, outcome),
   #            cols = vars(kartierungsumfang)) +
+  # labs(
+  #   title = "Lärmbedingte Krankheitslast errechnet aus \nULR-Belastetenzahlen in den Ballungsräumen",
+  #   x = "Endpunkt",
+  #   y = "Attributable Krankheitslast [DALY]"
+  # ) +
   labs(
-    title = "Lärmbedingte Krankheitslast errechnet aus \nULR-Belastetenzahlen in den Ballungsräumen",
-    x = "Endpunkt",
-    y = "Attributable Krankheitslast [DALY]"
+    title = "Noise attributable burden estimated from\nEND-exposure numbers in German agglomerations.",
+    x = "outcome",
+    y = "Attributable burden [DALY/year]"
   ) +
-  facet_grid(cols=vars(source))+
+    facet_grid(cols=vars(source))+
   guides(fill = guide_legend(title = "Bundesland"))+
  # scale_y_continuous(breaks = NULL)+
     theme_gray(base_size = 15)+
   theme(axis.text.x = element_text(angle = 90))
 
-ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
+ggsave("plots/DALY_Eionet_Ballung_all_ENG.png", width = 12, height = 8)
 #ggsave("plots/DALY_Bundesländer_major.png", width = 12, height = 8,dpi=200)
 ```
 
