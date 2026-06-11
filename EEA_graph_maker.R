@@ -17,5 +17,5 @@ EEA_EBD_result %>%
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank())
 ggsave("plots/EEA_burden_of_noise.png",
-       width = 8,
-       height = 6)
+       width = 8.5,
+       height = 5)
