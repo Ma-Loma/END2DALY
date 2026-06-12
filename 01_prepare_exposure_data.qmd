@@ -84,17 +84,17 @@ for (i in 1:nrow(meta)) {
       metadatazeile$tabellenblatt,
       "....\n")
   ds <- read_one_dataset(metadatazeile)
-    if ("country" %in% names(ds)){
-      ds<-ds %>% 
-        filter(country=="Germany")
-    } 
+    if ("country" %notin% names(ds)){
+      ds<-ds %>%
+        mutate(country="Germany")
+    }
   ds<-ds%>%
     mutate(gemeinde_kennziffer = if ("gemeinde_kennziffer" %in% names(.))
       as.character(gemeinde_kennziffer)
       else
         NA_character_)
     #mutate(gemeinde_kennziffer=as.character(gemeinde_kennziffer))
-  cat("Habe", nrow(ds), " Zeilen gelesen.")
+  cat("Habe ", nrow(ds), " Zeilen gelesen.")
   ds <- ds %>%
     lang_machen() %>%
     mutate(
@@ -119,7 +119,36 @@ for (i in 1:nrow(meta)) {
 }
 ```
 
-## Geocode vereinheitlichen
+### Country codes
+
+To unify the country designation, we use the [ISO 3166-1](https://datahub.io/core/country-list) List of countries and their two letter codes.
+
+```{r}
+
+iso_country_codes <-
+  read_delim(
+    PATH_ISO_COUNTRY,
+    delim = ",",
+    escape_double = FALSE,
+    trim_ws = TRUE)
+
+country_translations <-
+  c("Turkey" = "Türkiye")
+
+data <- data |>
+  mutate(country=str_replace_all(country,country_translations)) |>
+  left_join(iso_country_codes,
+            by = join_by(country))
+
+data |>
+  select(country,iso_code) |>
+  unique() |>
+  knitr::kable()
+```
+
+## Deutsche Daten
+
+### Geocode vereinheitlichen
 
 Bislang haben die gemeinde_kennziffern ein uneinheitliches Format: sie umfassen entweder 0, 1 oder führende Ziffern, die das Bundesland codieren.
 
@@ -136,14 +165,17 @@ bundesland_daten %>%
 
 ```
 
-Hier wird sie nun vereinheitlicht auf das 8-stellige Format mit dem führenden zweistelligen Bundesland-Code.
+Bei den deutschen Daten wird die Gemeindekennziffer auf das 8-stellige Format mit dem führenden zweistelligen Bundesland-Code vereinheitlicht.
 
 ```{r GKZvereinheitlichen}
-data<-data %>% 
+ger_data<-data |>
+  filter(iso_code == "DE") |>
   gkz_vereinheitlichen()
 ```
 
-## Wiedereinlesen Destatisdaten
+### Wiedereinlesen Destatisdaten
+
+Hier wird sie nun vereinheitlicht auf das 8-stellige Format mit dem führenden zweistelligen Bundesland-Code. 
 
 ```{r}
 #| label: readProcessedData
@@ -160,20 +192,22 @@ kreise_daten <- read_delim(
 gv_gemeinden <-
   paste0(PATH_AREA_OUTPUT, "gv_kreis_gemeinden.csv") %>%
   read_delim(.,
-             delim = ";",
+             delim = ",",
              escape_double = FALSE,
              trim_ws = TRUE)
 
 ```
 
-## Anreichern mit Gemeindeverzeichnis Daten (Destatis)
+### Anreichern mit Gemeindeverzeichnis Daten (Destatis)
 
 Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt. Für den Teil, in dem schon die Gemeindekennziffer existiert ist dies einfach
 
 ```{r gemeindedaten_anhaengen}
-dataMitGKZ <- data %>%
+ger_dataMitGKZ <- ger_data %>%
   filter(datenquelle != "EEA") %>% 
-  left_join(gv_gemeinden, by = "gemeinde_kennziffer")
+  left_join(gv_gemeinden, by = join_by(iso_code,
+                                        bundesland_code,
+                                        gemeinde_kennziffer))
 
 ```
 
@@ -200,7 +234,7 @@ uebersetzungen <- c(
   "Oldenburg" = "Oldenburg (Oldenburg)"
 )
 
-dataEEA <- data %>%
+ger_data_EEA <- ger_data %>%
   filter(datenquelle == "EEA") %>%
   mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,ersetzungen)) %>%
   mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,uebersetzungen)) %>%
@@ -213,23 +247,25 @@ EEArelevantGv <- gv_gemeinden %>%
            str_split_fixed(gemeinde_bezeichnung, ",", 2)[, 1]) %>%
   mutate(name_stadt_gemeinde = str_squish(name_stadt_gemeinde))
 
-dataEEAMitGKZ <- EEArelevantGv %>%
-  right_join(dataEEA, by = join_by(name_stadt_gemeinde)) %>%
+ger_data_EEAMitGKZ <- EEArelevantGv %>%
+  right_join(ger_data_EEA, by = join_by(iso_code,
+                                        bundesland_code,
+                                        name_stadt_gemeinde)) %>%
   mutate(geoschluessel_stellen = str_length(gemeinde_kennziffer)) %>%
   mutate(bundesland_code = str_sub(gemeinde_kennziffer, 1, 2))
 
-dataEEAMitGKZ %>%
+ger_data_EEAMitGKZ %>%
   filter(is.na(gemeinde_kennziffer)) %>%
   select(name_stadt_gemeinde) %>%
   unique()
 
-dataOut <-
-  bind_rows(dataMitGKZ, dataEEAMitGKZ)
+ger_dataOut <-
+  bind_rows(ger_dataMitGKZ, ger_data_EEAMitGKZ)
 ```
 
 ```{r datenexport}
 #| message: false
-dataOut %>% 
+ger_dataOut %>% 
   # select(-name_stadt_gemeinde,
   #        -geoschluessel_stellen,
   #        -bundesland_code,
@@ -249,16 +285,16 @@ dataOut %>%
 
 ```
 
-## Statistische Übersicht
+### Statistische Übersicht deutsche Daten
 
-Bisher eingelesen wurden die in @tbl-expositionsstatistik zusammengefassten Expositionsdaten
+An deutschen Daten wurden bisher die in @tbl-expositionsstatistik zusammengefassten Expositionsdaten eingelesen.
 
 ```{r}
 #| label: tbl-expositionsstatistik
 #| tbl-cap: "Deskriptive Auswertung der bisher eingelesenen Expositionsdaten"
 #| tbl-colwidths: [60,40]
 expoTab <-
-  dataOut %>%
+  ger_dataOut %>%
   summarise(
     exponierte = sum(exponierte),
     bevoelkerung = first(bevoelkerung),
@@ -312,3 +348,33 @@ expoTab %>%
             ) %>% 
   write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"Expositionszusammenfassung_EEA.csv"))
 ```
+
+
+
+## European exposure data
+
+Similar to the abeovementioned German data, here for the all european exposure data.
+
+```{r}
+#| label: write_european_exposure
+
+nuts <- read_excel("data/Gebietstabellen/raw/NUTS2021-NUTS2024.xlsx")|>
+  janitor::clean_names()
+
+nuts_smallest <- nuts |>
+  group_by(country_code, nuts_label) |>
+  slice_max(nuts_level, n = 1, with_ties = FALSE) |>
+  ungroup()
+
+eur_data<-data |>
+  filter(datenquelle == "EEA") |>
+  left_join(nuts_smallest,
+          by = join_by(iso_code == country_code,
+                       name_stadt_gemeinde==nuts_label),
+          relationship = "many-to-one") |>
+  select(where(~ !all(is.na(.))))# remove all columns with only NA
+
+
+
+```
+

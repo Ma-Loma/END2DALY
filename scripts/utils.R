@@ -127,7 +127,8 @@ lang_machen <- function(data) {
     # Keep only relevant columns
     select(contains("gemeinde") | 
            contains("belasteter") | 
-           contains("geoschluessel")) %>%
+           contains("geoschluessel")|
+             contains("country")) %>%
     # Remove "_bis_X" suffixes (artifact of Excel wide format)
     setNames(str_replace(names(.), "_bis_[0-9]*", "")) %>%
     # Pivot: exposure bands to rows

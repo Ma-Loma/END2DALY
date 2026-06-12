@@ -14,6 +14,7 @@ PATH_VG250_GIS         <- "data/Gebietstabellen/raw/DE_VG250EW_31122021.gpkg"
 PATH_KREISE_DATA       <- "data/Gebietstabellen/raw/kreise_daten.csv"
 PATH_GEMEINDEN_DATA    <- "data/Gebietstabellen/raw/gemeinden_daten.csv"
 PATH_BUNDESLAND_DATA   <- "data/Gebietstabellen/raw/bundesland_daten.csv"
+PATH_ISO_COUNTRY       <- "data/Gebietstabellen/raw/ico_code_country_12052026.csv"
 
 PATH_KAGZRM_KREISE_DATA<- "data/Gebietstabellen/raw/kagzrm_kreise.txt"
 PATH_KAGZRM_GEMEINDE_DATA<- "data/Gebietstabellen/raw/kagzrm_gemeinden.txt"
