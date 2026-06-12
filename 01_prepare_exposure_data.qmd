@@ -374,7 +374,8 @@ eur_data<-data |>
           relationship = "many-to-one") |>
   select(where(~ !all(is.na(.))))# remove all columns with only NA
 
-
+eur_data |>
+  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"eur_Expo.csv"))
 
 ```
 
