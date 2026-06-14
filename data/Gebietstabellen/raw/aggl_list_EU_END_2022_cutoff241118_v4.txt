@@ -1,0 +1,436 @@
+Country;EU;Agglomeration;Nr of inhabitants
+Austria;EU27;Graz;291000
+Austria;EU27;Innsbruck;144200
+Austria;EU27;Linz;260300
+Austria;EU27;Salzburg;155000
+Austria;EU27;Vienna;1977300
+Belgium;EU27;Antwerp;530630
+Belgium;EU27;Bruges;118509
+Belgium;EU27;Brussels;1222637
+Belgium;EU27;Charleroi;202421
+Belgium;EU27;Ghent;265086
+Belgium;EU27;Leuven;102236
+Belgium;EU27;Liege;195278
+Bulgaria;EU27;Burgas;348668
+Bulgaria;EU27;Pleven;102955
+Bulgaria;EU27;Plovdiv;364403
+Bulgaria;EU27;Ruse;143325
+Bulgaria;EU27;Sofia;1280034
+Bulgaria;EU27;Stara Zagora;136144
+Bulgaria;EU27;Varna;210813
+Croatia;EU27;Rijeka;107964
+Croatia;EU27;Split;160577
+Croatia;EU27;Zagreb;767131
+Cyprus;EU27;Larnaca;99649
+Cyprus;EU27;Limassol;200431
+Cyprus;EU27;Nicosia;254995
+Cyprus;EU27;Pafos;50461
+Czech Republic;EU27;Brno;443880
+Czech Republic;EU27;Liberec;164645
+Czech Republic;EU27;Olomouc;109514
+Czech Republic;EU27;Ostrava;428269
+Czech Republic;EU27;Plzen;191279
+Czech Republic;EU27;Prague;1442378
+Czech Republic;EU27;Teplice;171348
+Denmark;EU27;Aalborg;138581
+Denmark;EU27;Aarhus;251047
+Denmark;EU27;Copenhagen;1254256
+Denmark;EU27;Odense;196695
+Estonia;EU27;Tallinn;444970
+Estonia;EU27;Tartu;95389
+Finland;EU27;Espoo;289761
+Finland;EU27;Helsinki;653835
+Finland;EU27;Jyvaskyla;142400
+Finland;EU27;Kauniainen;9797
+Finland;EU27;Kuopio;119235
+Finland;EU27;Lahti;119875
+Finland;EU27;Oulu;205489
+Finland;EU27;Tampere;239269
+Finland;EU27;Turku;192962
+Finland;EU27;Vantaa;233775
+France;EU27;Angers;283200
+France;EU27;Arras;110200
+France;EU27;Aubergenville;411100
+France;EU27;Beauchamp;270700
+France;EU27;Besancon;198250
+France;EU27;Bordeaux;774900
+France;EU27;Brest;213000
+France;EU27;Brunoy;177800
+France;EU27;Caen;268900
+France;EU27;Cannes;160800
+France;EU27;Cergy;205700
+France;EU27;Clermont-Ferrand;291800
+France;EU27;Courcouronnes;347000
+France;EU27;Dijon;256100
+France;EU27;Dunkerque;203800
+France;EU27;Grenoble;451800
+France;EU27;Henin-Beaumont;125900
+France;EU27;Le Havre;240300
+France;EU27;Le Mans;210900
+France;EU27;Le Pecq;341300
+France;EU27;Lens;245000
+France;EU27;Lille;1154100
+France;EU27;Limoges;211508
+France;EU27;Lyon;1375000
+France;EU27;Marseille;1886800
+France;EU27;Metz;220600
+France;EU27;Montmorency;183100
+France;EU27;Montpellier;457800
+France;EU27;Nancy;260700
+France;EU27;Nantes;636000
+France;EU27;Nice;545000
+France;EU27;Orleans;287100
+France;EU27;Orsay;313800
+France;EU27;Paris;7068800
+France;EU27;Perpignan;268500
+France;EU27;Poitiers;191100
+France;EU27;Reims;299100
+France;EU27;Rennes;444700
+France;EU27;Roissy-en-France;349500
+France;EU27;Rouen;499600
+France;EU27;Saint-Etienne;408700
+France;EU27;Sainte-Genevieve-des-Bois;196000
+France;EU27;Strasbourg;491500
+France;EU27;Torcy;228900
+France;EU27;Toulon;434400
+France;EU27;Toulouse;760100
+France;EU27;Tours;299100
+France;EU27;Trappes;231100
+France;EU27;Versailles;269200
+Germany;EU27;Aachen;246443
+Germany;EU27;Augsburg;297052
+Germany;EU27;Bergisch Gladbach;111600
+Germany;EU27;Berlin;3606316
+Germany;EU27;Bielefeld;334002
+Germany;EU27;Bochum;370146
+Germany;EU27;Bonn;335975
+Germany;EU27;Bottrop;117311
+Germany;EU27;Bremen;561260
+Germany;EU27;Bremerhaven;117537
+Germany;EU27;Brunswick;250889
+Germany;EU27;Chemnitz;175193
+Germany;EU27;Cologne;1087583
+Germany;EU27;Darmstadt;161874
+Germany;EU27;Dortmund;609781
+Germany;EU27;Dresden;534445
+Germany;EU27;Duesseldorf;644000
+Germany;EU27;Duisburg;498182
+Germany;EU27;Erlangen;114328
+Germany;EU27;Essen;581980
+Germany;EU27;Frankfurt on the Main;770112
+Germany;EU27;Freiburg;230241
+Germany;EU27;Fuerth;129882
+Germany;EU27;Gelsenkirchen;259718
+Germany;EU27;Goettingen;136065
+Germany;EU27;Hagen;188501
+Germany;EU27;Halle;238367
+Germany;EU27;Hamburg;1853935
+Germany;EU27;Hanau;100307
+Germany;EU27;Hanover;551001
+Germany;EU27;Heidelberg;160355
+Germany;EU27;Heilbronn;130870
+Germany;EU27;Herne;161472
+Germany;EU27;Hildesheim;104579
+Germany;EU27;Ingolstadt;138537
+Germany;EU27;Karlsruhe;313092
+Germany;EU27;Kassel;202689
+Germany;EU27;Kiel;248000
+Germany;EU27;Koblenz;113161
+Germany;EU27;Krefeld;227100
+Germany;EU27;Leipzig;601866
+Germany;EU27;Leverkusen;163851
+Germany;EU27;Ludwigshafen;172145
+Germany;EU27;Luebeck;216000
+Germany;EU27;Magdeburg;237651
+Germany;EU27;Mainz;216108
+Germany;EU27;Mannheim;309370
+Germany;EU27;Moenchengladbach;270877
+Germany;EU27;Moers;103680
+Germany;EU27;Muelheim on the Ruhr;173255
+Germany;EU27;Muenster;317000
+Germany;EU27;Munich;1500962
+Germany;EU27;Neuss;155163
+Germany;EU27;Nuremberg;519850
+Germany;EU27;Oberhausen;211006
+Germany;EU27;Offenbach on the Main;133277
+Germany;EU27;Oldenburg;169605
+Germany;EU27;Osnabrueck;168286
+Germany;EU27;Pforzheim;125542
+Germany;EU27;Potsdam;175710
+Germany;EU27;Recklinghausen;119435
+Germany;EU27;Regensburg;154856
+Germany;EU27;Remscheid;111082
+Germany;EU27;Reutlingen;115793
+Germany;EU27;Rostock;208886
+Germany;EU27;Saarbruecken;183696
+Germany;EU27;Solingen;159029
+Germany;EU27;Stuttgart;609668
+Germany;EU27;Ulm;126329
+Germany;EU27;Wiesbaden;282903
+Germany;EU27;Wuerzburg;127459
+Germany;EU27;Wuppertal;361774
+Greece;EU27;Athens Center;NA
+Greece;EU27;Athens North;NA
+Greece;EU27;Ioannina;NA
+Greece;EU27;Iraklion;NA
+Greece;EU27;Larissa;NA
+Greece;EU27;Patras;NA
+Greece;EU27;Piraeus;NA
+Greece;EU27;Thessaloniki;NA
+Greece;EU27;Volos;NA
+Hungary;EU27;Budapest;2183579
+Hungary;EU27;Debrecen;202214
+Hungary;EU27;Gyor;130094
+Hungary;EU27;Kecskemet;110638
+Hungary;EU27;Miskolc;155650
+Hungary;EU27;Nyiregyhaza;117121
+Hungary;EU27;Pecs;144188
+Hungary;EU27;Szeged;161122
+Iceland;EEA32;Akureyri;NA
+Iceland;EEA32;Gardabaer;NA
+Iceland;EEA32;Hafnafjordur;NA
+Iceland;EEA32;Kopavogur;NA
+Iceland;EEA32;Mosfellsbaer;NA
+Iceland;EEA32;Reykjanesbaer;NA
+Iceland;EEA32;Reykjavik;NA
+Iceland;EEA32;Selfoss;NA
+Iceland;EEA32;Seltjarnarnes;NA
+Ireland;EU27;Cork;272400
+Ireland;EU27;Dublin;1566538
+Ireland;EU27;Limerick;122596
+Italy;EU27;Bari;316227
+Italy;EU27;Bologna;488742
+Italy;EU27;Bolzano;107879
+Italy;EU27;Brescia;196700
+Italy;EU27;Cagliari;342810
+Italy;EU27;Catania;314125
+Italy;EU27;Ferrara;134914
+Italy;EU27;Florence;359755
+Italy;EU27;Foggia;146406
+Italy;EU27;Forli;117479
+Italy;EU27;Genoa;583601
+Italy;EU27;Latina;127861
+Italy;EU27;Livorno;143683
+Italy;EU27;Messina;220094
+Italy;EU27;Milan-Monza;2312197
+Italy;EU27;Modena;187977
+Italy;EU27;Naples;940940
+Italy;EU27;Padua;196326
+Italy;EU27;Palermo;640720
+Italy;EU27;Parma;200218
+Italy;EU27;Perugia;164057
+Italy;EU27;Pescara;119445
+Italy;EU27;Piacenza;102731
+Italy;EU27;Prato;200647
+Italy;EU27;Ravenna;160509
+Italy;EU27;Reggio Emilia;169029
+Italy;EU27;Rimini;148688
+Italy;EU27;Rome;2783809
+Italy;EU27;Sassari;111600
+Italy;EU27;Taranto;189218
+Italy;EU27;Terni;110940
+Italy;EU27;Trieste;196908
+Italy;EU27;Turin;1334575
+Italy;EU27;Venice;255609
+Italy;EU27;Verona;258500
+Latvia;EU27;Riga;614618
+Liechtenstein;EEA32;NA;NA
+Lithuania;EU27;Kaunas;298753
+Lithuania;EU27;Siauliai;109636
+Lithuania;EU27;Vilnius;578801
+Luxembourg;EU27;Luxembourg;200667
+Luxembourg;EU27;Luxembourg_south;180449
+Malta;EU27;Valletta;339361
+Netherlands;EU27;Alkmaar;249472
+Netherlands;EU27;Almere;213006
+Netherlands;EU27;Amersfoort;157327
+Netherlands;EU27;Amsterdam;2636524
+Netherlands;EU27;Apeldoorn;163980
+Netherlands;EU27;Arnhem;161852
+Netherlands;EU27;Breda;184068
+Netherlands;EU27;Eindhoven;465719
+Netherlands;EU27;Enschede;313651
+Netherlands;EU27;Gouda;215066
+Netherlands;EU27;Groningen;232369
+Netherlands;EU27;Heerlen;245921
+Netherlands;EU27;Hilversum;233128
+Netherlands;EU27;Maastricht;120697
+Netherlands;EU27;Nijmegen;177233
+Netherlands;EU27;Rotterdam;1363320
+Netherlands;EU27;s Hertogenbosch;155301
+Netherlands;EU27;The Hague;1384824
+Netherlands;EU27;Tilburg;219843
+Netherlands;EU27;Utrecht;571209
+Netherlands;EU27;Zwolle;129029
+Norway;EEA32;Bergen;283929
+Norway;EEA32;Drammen;101386
+Norway;EEA32;Fredrikstad/Sarpsborg;139117
+Norway;EEA32;Oslo;1120927
+Norway;EEA32;Stavanger/Sandnes;261485
+Norway;EEA32;Trondheim;205163
+Poland;EU27;Bialystok;296401
+Poland;EU27;Bielsko-Biała;169756
+Poland;EU27;Bydgoszcz;344091
+Poland;EU27;Bytom;162250
+Poland;EU27;Chorzow;106846
+Poland;EU27;Czestochowa;205893
+Poland;EU27;Dabrowa Gornicza;117650
+Poland;EU27;Elblag;108177
+Poland;EU27;Gdansk;470621
+Poland;EU27;Gdynia;243918
+Poland;EU27;Gliwice;160503
+Poland;EU27;Gorzow Wielkopolski;121714
+Poland;EU27;Katowice;269367
+Poland;EU27;Kielce;192468
+Poland;EU27;Krakow;706065
+Poland;EU27;Lodz;614427
+Poland;EU27;Lublin;336339
+Poland;EU27;Olsztyn;170622
+Poland;EU27;Opole;122567
+Poland;EU27;Plock;112687
+Poland;EU27;Poznan;530741
+Poland;EU27;Radom;193016
+Poland;EU27;Ruda Slaska;135695
+Poland;EU27;Rybnik;127768
+Poland;EU27;Rzeszow;193829
+Poland;EU27;Sosnowiec;181532
+Poland;EU27;Szczecin;398255
+Poland;EU27;Tarnow;107045
+Poland;EU27;Torun;199469
+Poland;EU27;Tychy;126871
+Poland;EU27;Walbrzych;108222
+Poland;EU27;Warsaw;1663587
+Poland;EU27;Wloclawek;99100
+Poland;EU27;Wroclaw;606939
+Poland;EU27;Zabrze;169831
+Poland;EU27;Zielona Gora;134385
+Portugal;EU27;Amadora;171500
+Portugal;EU27;Lisbon;545923
+Portugal;EU27;Matosinhos;172586
+Portugal;EU27;Odivelas;148058
+Portugal;EU27;Oeiras;171767
+Portugal;EU27;Porto;237593
+Romania;EU27;Arad;145078
+Romania;EU27;Bacau;136087
+Romania;EU27;Baia Mare;108759
+Romania;EU27;Botosani;90010
+Romania;EU27;Braila;154686
+Romania;EU27;Brasov;237589
+Romania;EU27;Bucharest;2161347
+Romania;EU27;Buzau;103481
+Romania;EU27;Cluj-Napoca;286598
+Romania;EU27;Constanta;263688
+Romania;EU27;Craiova;234140
+Romania;EU27;Drobeta-Turnu Severin;79865
+Romania;EU27;Galati;217851
+Romania;EU27;Iasi;271692
+Romania;EU27;Oradea;183105
+Romania;EU27;Piatra-Neamt;79679
+Romania;EU27;Pitesti;141275
+Romania;EU27;Ploiesti;180540
+Romania;EU27;Ramnicu Valcea;93151
+Romania;EU27;Satu Mare;91520
+Romania;EU27;Sibiu;134309
+Romania;EU27;Suceava;84322
+Romania;EU27;Targu Mures;116033
+Romania;EU27;Timisoara;250849
+Romania;EU27;Vaslui;63035
+Slovakia;EU27;Bratislava;459787
+Slovakia;EU27;Kosicka;238675
+Slovenia;EU27;Ljubljana;274500
+Slovenia;EU27;Maribor;106400
+Spain;EU27;A Coruna;247046
+Spain;EU27;Albacete;173329
+Spain;EU27;Alcala de Henares;190633
+Spain;EU27;Alcobendas;117040
+Spain;EU27;Alcorcon;170514
+Spain;EU27;Algeciras;123078
+Spain;EU27;Alicante;332067
+Spain;EU27;Almeria;199650
+Spain;EU27;Badajoz;125471
+Spain;EU27;Baix Llobregat Nord;232060
+Spain;EU27;Baix Llobregat Sud;196987
+Spain;EU27;Barakaldo;100049
+Spain;EU27;Barcelona;1636762
+Spain;EU27;Barcelones Nord;376752
+Spain;EU27;Bilbao;345910
+Spain;EU27;Burgos;175821
+Spain;EU27;Cadiz;116027
+Spain;EU27;Cartagena;159377
+Spain;EU27;Castellon de la Plana;174264
+Spain;EU27;Cordoba;326039
+Spain;EU27;Dos Hermanas;133968
+Spain;EU27;Elche;219462
+Spain;EU27;Fuenlabrada;193700
+Spain;EU27;Getafe;192601
+Spain;EU27;Gijon;274068
+Spain;EU27;Girones;133214
+Spain;EU27;Granada;258750
+Spain;EU27;Huelva;146121
+Spain;EU27;Jaen;115837
+Spain;EU27;Jerez de la Frontera;197346
+Spain;EU27;L'Hospitalet de Llobregat;264923
+Spain;EU27;Las Palmas de Gran Canaria;381223
+Spain;EU27;Leganes;192827
+Spain;EU27;Leon;125163
+Spain;EU27;Lleida;138956
+Spain;EU27;Logrono;150808
+Spain;EU27;Madrid;3334730
+Spain;EU27;Malaga;566913
+Spain;EU27;Mataro;128265
+Spain;EU27;Mostoles;209184
+Spain;EU27;Murcia;453258
+Spain;EU27;Oviedo;222936
+Spain;EU27;Palma de Mallorca;414072
+Spain;EU27;Pamplona;335350
+Spain;EU27;Parla;135125
+Spain;EU27;Reus;104373
+Spain;EU27;Roquetas de Mar;106147
+Spain;EU27;Salamanca;144228
+Spain;EU27;San Cristobal de La Laguna;158911
+Spain;EU27;San Sebastian - Donostia;178446
+Spain;EU27;Santa Cruz de Tenerife;208755
+Spain;EU27;Santander;172758
+Spain;EU27;Sevilla;690609
+Spain;EU27;Tarragones;140408
+Spain;EU27;Telde;102070
+Spain;EU27;Torrejon de Ardoz;131376
+Spain;EU27;Valencia;795736
+Spain;EU27;Valladolid;298412
+Spain;EU27;Valles Occidental I;260115
+Spain;EU27;Valles Occidental II;228068
+Spain;EU27;Vigo;291082
+Spain;EU27;Vitoria - Gazteiz;244420
+Spain;EU27;Zaragoza;670356
+Sweden;EU27;Boras;113179
+Sweden;EU27;Eskilstuna;106859
+Sweden;EU27;Gavle;102418
+Sweden;EU27;Gothenburg;579281
+Sweden;EU27;Halmstad;102767
+Sweden;EU27;Helsingborg;147734
+Sweden;EU27;Huddinge;112848
+Sweden;EU27;Jonkoping;141081
+Sweden;EU27;Linkoping;163051
+Sweden;EU27;Lund;124935
+Sweden;EU27;Malmo;344166
+Sweden;EU27;Nacka;105189
+Sweden;EU27;Norrkoping;143171
+Sweden;EU27;Orebro;155696
+Sweden;EU27;Stockholm;974073
+Sweden;EU27;Umea;128901
+Sweden;EU27;Uppsala;230767
+Sweden;EU27;Vasteras;154049
+Switzerland;EEA32;Baden-Brugg;113240
+Switzerland;EEA32;Basel;554536
+Switzerland;EEA32;Bern;421240
+Switzerland;EEA32;Biel/Bienne;107953
+Switzerland;EEA32;Fribourg;107985
+Switzerland;EEA32;Geneva;602056
+Switzerland;EEA32;Lausanne;437806
+Switzerland;EEA32;Lucerne;236386
+Switzerland;EEA32;Lugano;113240
+Switzerland;EEA32;St. Gallen;167517
+Switzerland;EEA32;Winterthur;146238
+Switzerland;EEA32;Zug;135171
+Switzerland;EEA32;Zurich;1417961
+Turkey;EEA32;NA;NA

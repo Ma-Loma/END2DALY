@@ -10,7 +10,8 @@ execute:
 
 ```{r front_matter}
 rm(list = ls())
-.libPaths("M:/R/library-4.6")
+.libPaths("C:/Users/lochmannm/Documents/R/library-4.6")
+#.libPaths("M:/R/library-4.6")
 library(tidyverse)
 library(readxl)
 library(flextable)
@@ -124,6 +125,7 @@ for (i in 1:nrow(meta)) {
 To unify the country designation, we use the [ISO 3166-1](https://datahub.io/core/country-list) List of countries and their two letter codes.
 
 ```{r}
+#| label: country_codes
 
 iso_country_codes <-
   read_delim(
@@ -366,8 +368,23 @@ nuts_smallest <- nuts |>
   slice_max(nuts_level, n = 1, with_ties = FALSE) |>
   ungroup()
 
+
+eur_agg_list<-read_delim(
+  "data/Gebietstabellen/raw/aggl_list_EU_END_2022_cutoff241118_v4.txt",
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+) |>
+  janitor::clean_names() |>
+  mutate(name_stadt_gemeinde = agglomeration,
+         population = nr_of_inhabitants,
+         .keep="unused")
+
 eur_data<-data |>
   filter(datenquelle == "EEA") |>
+  left_join(eur_agg_list,
+            by = join_by(name_stadt_gemeinde,
+                         country)) |>
   left_join(nuts_smallest,
           by = join_by(iso_code == country_code,
                        name_stadt_gemeinde==nuts_label),

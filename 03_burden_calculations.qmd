@@ -8,7 +8,8 @@ bibliography: references.bib
 ```{r setup, include=FALSE}
 # Bibliotheken laden
 rm(list = ls())
-.libPaths("M:/R/library-4.6")
+.libPaths("C:/Users/lochmannm/Documents/R/library-4.6")
+#.libPaths("M:/R/library-4.6")
 #falls aktuellster healthiar gewünscht; diese Lade-Methode funkioniert u.U. nicht auf allen Rechnern
 # library(remotes)
 # remotes::install_github(repo = "SwissTPH/healthiar", build_vignettes = TRUE)
@@ -101,6 +102,14 @@ allExpo <- read_delim(
   escape_double = FALSE,
   trim_ws = TRUE
 )
+
+eurExpo <- read_delim(
+  PATH_EUREXPO_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)|>
+  filter(!is.na(name_stadt_gemeinde))
 
 
 ```
