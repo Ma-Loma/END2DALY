@@ -241,7 +241,7 @@ ger_data_EEA <- ger_data %>%
   mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,ersetzungen)) %>%
   mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,uebersetzungen)) %>%
   mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,"Mörs","Moers")) %>% 
-  select(-gemeinde_kennziffer,-geoschluessel_stellen)
+  select(-gemeinde_kennziffer,-geoschluessel_stellen,-bundesland_code)
 
 EEArelevantGv <- gv_gemeinden %>%
   filter(str_detect(gemeinde_kennzeichnung, "tadt")) %>%
@@ -251,7 +251,6 @@ EEArelevantGv <- gv_gemeinden %>%
 
 ger_data_EEAMitGKZ <- EEArelevantGv %>%
   right_join(ger_data_EEA, by = join_by(iso_code,
-                                        bundesland_code,
                                         name_stadt_gemeinde)) %>%
   mutate(geoschluessel_stellen = str_length(gemeinde_kennziffer)) %>%
   mutate(bundesland_code = str_sub(gemeinde_kennziffer, 1, 2))
