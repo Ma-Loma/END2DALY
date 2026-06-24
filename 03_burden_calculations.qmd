@@ -283,10 +283,12 @@ datEEA_all <- dat_exp_ERF %>%
 
 # Calculate both absolute and relative risk
 resEEA_ar <- datEEA_all %>% 
+  filter(risk_type=="absolute_risk") %>% 
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "absolute_risk")
 
 resEEA_rr <- datEEA_all %>% 
+  filter(risk_type=="relative_risk") %>% 
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "relative_risk")
 
@@ -302,10 +304,12 @@ datBundesland_major <- dat_exp_ERF %>%
          kartierungsumfang == "major")
 
 resBundesland_ar <- datBundesland_major %>%
+  filter(risk_type=="absolute_risk") %>% 
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "absolute_risk")
 
 resBundesland_rr <- datBundesland_major %>%
+  filter(risk_type=="relative_risk") %>% 
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "relative_risk")
 
