@@ -120,6 +120,7 @@ In @fig-plotERFs all ERFs are on display.
 #| label: fig-plotERFs
 #| fig-cap: "Overview of all imported ERF."
 functionsETCHE |>
+  mutate(function_label=paste0(outcome,", ",risk_type)) |>
   # mutate(id = row_number()) |>
   mutate(data = map(ERF, \(formel)
                     tibble(
@@ -127,12 +128,10 @@ functionsETCHE |>
                     ))) |>
   unnest(data) |>
   ggplot(aes(c, y)) +
-  geom_line(aes(linetype = metric, color = risk_type)) +
+  geom_line(aes(linetype = metric, color = source)) +
   geom_vline(aes(xintercept = threshold)) +
-  facet_grid(
-    cols = vars(outcome),
-    rows = vars(source),
-    labeller = labeller(outcome = label_wrap_gen(width = 10))
+  facet_wrap(vars(function_label),
+    labeller = labeller(function_label = label_wrap_gen(width = 10))
   ) +
   scale_y_continuous(labels = scales::percent) +
   labs(
@@ -143,7 +142,8 @@ functionsETCHE |>
        Industry is missing, due to misspelling in report."
   ) +
   guides(color = guide_legend(title = "Risk type"),
-         linetype = guide_legend(title = "Exposure Leq"))
+         linetype = guide_legend(title = "Exposure Leq"))+
+  theme(strip.clip = "on")
 ggsave("plots/all_ERFs.png")
 
 ```
