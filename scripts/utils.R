@@ -493,7 +493,7 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
   
   outc_sourc_metr_liste <- dat %>%
     filter(risk_type == risk_approach) %>%
-    select(outcome, source, metric) %>%
+    select(source, metric, outcome, datenquelle, kartierungsumfang) %>%
     unique()
   
   if (nrow(outc_sourc_metr_liste) == 0) {
@@ -509,17 +509,34 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
     zeile <- outc_sourc_metr_liste[i, ]
     print(zeile)
     dat_subset <- dat %>%
-      filter(outcome == zeile$outcome,
-             source == zeile$source,
-             metric == zeile$metric)
+      filter(
+        outcome == zeile$outcome,
+        source == zeile$source,
+        metric == zeile$metric,
+        datenquelle == datenquelle,
+        kartierungsumfang == kartierungsumfang
+      )
+    
+    dat_subset |>
+      summarise(
+        n = n(),
+        expon = sum(exponierte),
+        .by = c(metric, source, kartierungsumfang, datenquelle, outcome)
+      ) |>
+      print()
     
     # Call appropriate calc function based on risk_approach
     if (risk_approach == "absolute_risk") {
       outcome_all <- bind_rows(outcome_all, calc_macro_ar_impact(dat_subset))
     }
     else if (any(is.na(dat_subset$bhd))) {
-      warning(zeile$outcome,zeile$source,zeile$metric," skipped, as at least one bhd is NA: ",
-              paste(unique(dat_subset$bhd), collapse = ", "))
+      warning(
+        zeile$outcome,
+        zeile$source,
+        zeile$metric,
+        " skipped, as at least one bhd is NA: ",
+        paste(unique(dat_subset$bhd), collapse = ", ")
+      )
     }
     else if (risk_approach == "relative_risk") {
       outcome_all <- bind_rows(outcome_all, calc_macro_rr_impact(dat_subset))
