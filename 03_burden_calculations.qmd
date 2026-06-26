@@ -214,68 +214,11 @@ dat_exp_ERF %>%
 
 ## Gesundheitsauswirkungen für verschiedene Lärmquellen berechnen
 
-Hier beispielhaft für einige Gesundheitsauswirkungen, zunächst die für "absolutes Risiko": HA, HSD, Leseverständnis.
+Here, we filter the overall exposure data to use only the exposure data provided by EEA and calculate then the health impact: all endpoints as absolute risk and all endpoints relative risk. 
 
-```{r function_all_ar_res}
 
-all_ar_res <- function(dat)
-{
-  outc_sourc_metr_liste <- dat %>%
-    filter(risk_type == "absolute_risk") %>%
-    select(outcome, source, metric, bhd) %>%
-    unique()
-  
-  print("hier wird diese Outcome-Liste berücksichtigt:")
-  print(outc_sourc_metr_liste)
-  outcome_ar <- NULL
-  
-  # Basic for loop iteration
-  for (i in 1:nrow(outc_sourc_metr_liste)) {
-    zeile <- outc_sourc_metr_liste[i, ]
-    print("Nun Kombi:")
-    print(zeile)
-    osm <- dat %>%
-      filter(outcome == zeile$outcome,
-             source == zeile$source,
-             metric == zeile$metric)
-    outcome_ar <-
-      calc_macro_ar_impact(osm) %>%
-      rbind(outcome_ar)# Assuming this function returns a data frame
-  }
-  return(outcome_ar)
-}
-
-all_rr_res <- function(dat)
-{
-  outc_sourc_metr_liste <- dat %>%
-    filter(risk_type == "relative_risk") %>%
-    filter(!is.na(bhd)) %>% #bhd is needed in calc_macro_rr_impact; better error handling would be nice: throw warning, return line with NA in certain datafield and continue
-    select(outcome, source, metric, bhd) %>%
-    unique()
-  
-  print("hier wird diese Outcome-Liste berücksichtigt:")
-  print(outc_sourc_metr_liste)
-  outcome_rr <- NULL
-  
-  # Basic for loop iteration
-  for (i in 1:nrow(outc_sourc_metr_liste)) {
-    zeile <- outc_sourc_metr_liste[i, ]
-    print("Nun Kombi:")
-    print(zeile)
-    osm <- dat %>%
-      filter(outcome == zeile$outcome,
-             source == zeile$source,
-             metric == zeile$metric)
-    outcome_rr <-
-      calc_macro_rr_impact(osm) %>%
-      rbind(outcome_rr)# Assuming this function returns a data frame
-  }
-  return(outcome_rr)
-}
-
-```
-
-```{r health-impacts-eea-ar-rr}
+```{r}
+#| label: health-impacts-eea
 
 datEEA_all <- dat_exp_ERF %>%
   filter(datenquelle == "EEA",
@@ -292,24 +235,30 @@ resEEA_rr <- datEEA_all %>%
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "relative_risk")
 
-# Merge by selecting only common columns
+# combine after typecasting some columns
 resEEA_all <- resEEA_ar |>
   mutate(prop_pop_exp = as.character(prop_pop_exp)) |>
   mutate(exp_category = as.character(exp_category)) |>
   mutate(exp = as.character(exp)) |>
   bind_rows(resEEA_rr) 
 
-datBundesland_major <- dat_exp_ERF %>%
-  filter(datenquelle == "Bundesland",
-         kartierungsumfang == "major")
+```
 
-resBundesland_ar <- datBundesland_major %>%
+The same for data provided directly from the Bundesländer; here starting only with those calculating the major sources.
+
+```{r}
+#| label: health-impacts-bundesland_maj
+datBundesland <- dat_exp_ERF %>%
+  filter(datenquelle == "Bundesland")
+
+resBundesland_ar <- datBundesland %>%
   filter(risk_type=="absolute_risk") %>% 
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "absolute_risk")
 
-resBundesland_rr <- datBundesland_major %>%
+resBundesland_rr <- datBundesland %>%
   filter(risk_type=="relative_risk") %>% 
+  filter(source == "air") %>% 
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "relative_risk")
 
@@ -318,9 +267,8 @@ resBundesland_all <- resBundesland_ar |>
   mutate(exp_category = as.character(exp_category)) |>
   mutate(exp = as.character(exp)) |>
   bind_rows(resBundesland_rr)
-
-
 ```
+
 
 ## Visualisierungen
 Lärmbelastung in Hessen nach Kreisen
@@ -372,7 +320,8 @@ resEEA_all %>%
     x = "outcome",
     y = "Attributable burden [DALY/year]"
   ) +
-    facet_grid(cols=vars(source))+
+    facet_grid(cols = vars(source),
+               rows = vars(kartierungsumfang))+
   guides(fill = guide_legend(title = "Bundesland"))+
  # scale_y_continuous(breaks = NULL)+
     theme_gray(base_size = 15)+
@@ -404,13 +353,13 @@ kagzrm_kreise <- read_delim(
   mutate(kreis_code=as.character(kreis_code))
 
 res_KAGZRM_gem <-
-  resBundesland_major %>%
+  resBundesland_all %>%
   left_join(gemeinden_daten, by = join_by(geo_id_micro == gemeinde_kennziffer)) %>%
   semi_join(kagzrm_gemeinden, by = join_by(geo_id_micro == gemeinde_kennziffer))
 
 
 res_KAGZRM_kr <-
-  resBundesland_major %>%
+  resBundesland_all %>%
   left_join(gemeinden_daten, by = join_by(geo_id_micro == gemeinde_kennziffer)) %>%
   semi_join(kagzrm_kreise, by = c("bundesland_code", "kreis_code"))
 
@@ -426,8 +375,8 @@ res_KAGZRM %>%
   #guides(fill = guide_legend(title = "Kreis"))+
   #  scale_y_continuous(breaks = NULL)+
   theme_gray(base_size = 15) +
-  facet_grid(rows = vars(source),
-             cols = vars(kartierungsumfang))
+  facet_grid(cols = vars(source),
+             rows = vars(kartierungsumfang))
 ggsave("plots/allKAGZRM_major.png")
 ```
 
