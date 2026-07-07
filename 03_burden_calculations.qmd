@@ -156,6 +156,24 @@ Hier gibts eine breite Tabelle, sollte später noch mehr Richtung saubere Datenb
 
 allExpo_w <- allExpo %>%
   left_join(gemeinden_daten, by = join_by("gemeinde_kennziffer"))
+
+# # Export some exposures
+# allExpo_w |>
+#   filter(quelle == "Straße") |>
+#   filter(kartierungsumfang == "all") |>
+#   filter(datenquelle == "EEA") |>
+#   summarise(
+#     # n = n(),
+#     exponierte = sum(exponierte),
+#     #.by=) %>%
+#     .by = c(
+#       #gemeinde_bezeichnung,
+#       metrik,
+#       l_untergrenze
+#     )
+#   ) |>
+#   pivot_wider(names_from = l_untergrenze, values_from = exponierte) |>
+#   write_tsv("agg_road_EEA_Germany.csv")
 ```
 
 ## Expositionsdaten und ERF-Funktionen zusammenführen
