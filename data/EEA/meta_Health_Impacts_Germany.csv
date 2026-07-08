@@ -1,0 +1,19 @@
+table;field;data_type;description;format;primary_key;foreign_key_table;foreign_key_field
+Health_Impacts_Germany;Threshold;text;Name of the set of thresholds;;;;
+Health_Impacts_Germany;year_end;integer;Reference year for the data (end of reporting period);integer;;;
+Health_Impacts_Germany;country;text;Reporting country (name or code);;;;
+Health_Impacts_Germany;geo;text;Geographic identifier or spatial unit (e.g. region, agglomeration, or grid);;;;
+Health_Impacts_Germany;noise_source;text;Source of noise (e.g. road, rail, air, industry);;;;
+Health_Impacts_Germany;location;text;Type of area (e.g. urban, rural, agglomeration, specific location type);;;;
+Health_Impacts_Germany;inhabitants_lden_gf;integer;Number of people exposed to noise levels (Lden indicator), including gap-filling where applicable;;;;
+Health_Impacts_Germany;inhabitants_lnight_gf;integer;Number of people exposed to night-time noise levels (Lnight indicator), including gap-filling;;;;
+Health_Impacts_Germany;x_s_annoy_18;integer;Estimated number of people highly annoyed by noise;;;;
+Health_Impacts_Germany;x_h_sleepd;integer;Estimated number of people highly sleep disturbed due to noise;;;;
+Health_Impacts_Germany;x_all_nat_mort;integer;Total natural mortality cases in the population due to noise;;;;
+Health_Impacts_Germany;x_CVD;integer;Estimated number of cardiovascular disease cases attributable to noise;;;;
+Health_Impacts_Germany;x_diabetes;integer;Estimated number of diabetes cases attributable to noise exposure;;;;
+Health_Impacts_Germany;s_annoy_yld_0011;decimal;Years lived with disability (YLD) due to noise annoyance;decimal;;;
+Health_Impacts_Germany;h_sleepd_yld_001;decimal;YLD due to sleep disturbance;decimal;;;
+Health_Impacts_Germany;x_CVD_yld;decimal;YLD associated with cardiovascular disease attributable to noise;decimal;;;
+Health_Impacts_Germany;x_diab_yld;decimal;YLD associated with diabetes attributable to noise;decimal;;;
+Health_Impacts_Germany;x_mort_yll;decimal;Years of life lost (YLL) due to premature mortality attributable to noise;decimal;;;

@@ -120,6 +120,64 @@ for (i in 1:nrow(meta)) {
 }
 ```
 
+## EEA Exposure and impact data
+
+In order to compare to exposure data used here as well as the derived result data, we load the EEA-data from country fact sheets.
+
+```{r}
+#| label: EEA_results_file
+
+# Metadaten einlesen
+meta_EEA<- read_delim(PATH_METADATA_EEA_DE,
+                       col_types = cols(.default = "c"),
+                       delim = ";")
+
+# Mapping von Metadaten-Typen zu readxl-col_types
+map_type <- function(dt){
+  dt <- tolower(dt)
+  switch(dt,
+         integer = "numeric",
+         decimal = "numeric",
+         text    = "text",
+         date    = "date",
+         boolean = "logical",
+         "text")  # default
+}
+
+col_types_vec <- setNames(
+  sapply(meta_EEA$data_type, map_type),
+  meta_EEA$field
+)
+# Excel-Datei direkt mit den Typen einlesen
+data_EEA <- read_excel(PATH_DATA_EEA_DE, col_types = col_types_vec) |>
+  mutate(agg = str_detect(noise_source, "Inside"), .after = noise_source) |>
+  mutate(kartierungsumfang = str_extract(noise_source, "Major"), .after = noise_source) |>
+  mutate(noise_source = str_replace_all(
+    noise_source,
+    c(
+      "Airprots" = "air",
+      "Aircraft" = "air",
+      "Road Traffic" = "road",
+      "Railway Traffic" = "rail",
+      "Industrial Noise" = "industry",
+      " Inside Agglomerations" = "",
+      " Outside Agglomerations" = "",
+      "Major" = ""
+    )
+  ))|>
+  mutate(noise_source = str_squish(noise_source)) |>
+  mutate(noise_source = str_to_lower(noise_source),
+         kartierungsumfang = str_to_lower(kartierungsumfang))
+  
+
+data_EEA |>
+  filter(!is.na(location))|>
+  ggplot(aes(x=noise_source,fill= agg)) +
+  geom_col(aes(y=inhabitants_lden_gf))+
+  facet_grid(vars(kartierungsumfang))
+  
+```
+
 ### Country codes
 
 To unify the country designation, we use the [ISO 3166-1](https://datahub.io/core/country-list) List of countries and their two letter codes.

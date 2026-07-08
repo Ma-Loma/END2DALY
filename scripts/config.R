@@ -11,6 +11,9 @@ PATH_ETCHE_FUNCTIONS   <- "data/ETCHE/functionsETCHE.xlsx"
 PATH_GV_REFERENCE      <- "data/Gebietstabellen/raw/GV100AD_31122021.txt"#probable reference date of END
 PATH_VG250_GIS         <- "data/Gebietstabellen/raw/DE_VG250EW_31122021.gpkg"
 
+PATH_METADATA_EEA_DE   <- "data/EEA/meta_Health_Impacts_Germany.csv"
+PATH_DATA_EEA_DE       <- "data/EEA/Health_Impacts_Germany.xlsx"
+
 PATH_KREISE_DATA       <- "data/Gebietstabellen/raw/kreise_daten.csv"
 PATH_GEMEINDEN_DATA    <- "data/Gebietstabellen/raw/gemeinden_daten.csv"
 PATH_BUNDESLAND_DATA   <- "data/Gebietstabellen/raw/bundesland_daten.csv"
