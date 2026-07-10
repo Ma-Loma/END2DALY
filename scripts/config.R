@@ -36,6 +36,27 @@ PATH_EUREXPO_DATA     <-paste0(PATH_EXPO_OUTPUT,"eur_Expo.csv")
 HESSEN_ONLY            <- TRUE
 HESSEN_BUNDESLAND_CODE <- "06"
 
+# Translations
+LETTER_REPLACEMENTS_EN_GER <-
+  c(
+    "oe" = "ö",
+    "ae" = "ä",
+    "ue" = "ü",
+    "on the Main" = "am Main",
+    "on the Ruhr" = "an der Ruhr"
+  )
+TRANSLATIONS_EN_GER <- c(
+  "Brunswick" = "Braunschweig",
+  "Cologne" = "Köln",
+  "Freiburg" = "Freiburg im Breisgau",
+  "Halle" = "Halle (Saale)",
+  "Hanover" = "Hannover",
+  "Ludwigshafen" = "Ludwigshafen am Rhein",
+  "Munich" = "München",
+  "Nuremberg" = "Nürnberg",
+  "Oldenburg" = "Oldenburg (Oldenburg)"
+)
+
 # Create output directory if needed
 dir.create(PATH_EXPO_OUTPUT, recursive = TRUE, showWarnings = FALSE)
 dir.create(PATH_AREA_OUTPUT, recursive = TRUE, showWarnings = FALSE)

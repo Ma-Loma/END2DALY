@@ -20,8 +20,8 @@ library(sf)
 
 ```{r}
 #| label: load_shared_util_fkt
-source("scripts/utils.R")
 source("scripts/config.R")
+source("scripts/utils.R")
 ```
 
 ## Datenformate
@@ -47,8 +47,8 @@ meta <-
     escape_double = FALSE,
     trim_ws = TRUE
   ) |>
-  dplyr::mutate(quelle = factor(quelle),
-                kartierungsumfang = factor(kartierungsumfang))
+  dplyr::mutate(noise_source = factor(noise_source),
+                mapping_extend = factor(mapping_extend))
 
 ```
 
@@ -100,9 +100,9 @@ for (i in 1:nrow(meta)) {
     lang_machen() %>%
     mutate(
       bundesland_code        = metadatazeile$bundesland_code,
-      quelle            = metadatazeile$quelle,
-      kartierungsumfang = metadatazeile$kartierungsumfang,
-      datenquelle = metadatazeile$datenquelle
+      noise_source            = metadatazeile$noise_source,
+      mapping_extend = metadatazeile$mapping_extend,
+      data_source = metadatazeile$data_source
     )
   cat("... und ins lange Format formatiert.\n")
   if (i == 1) {
@@ -151,8 +151,14 @@ col_types_vec <- setNames(
 # Excel-Datei direkt mit den Typen einlesen
 data_EEA <- read_excel(PATH_DATA_EEA_DE, col_types = col_types_vec) |>
   mutate(noise_source = str_to_lower(noise_source))|>
-  mutate(agg = str_detect(noise_source, "inside"), .after = noise_source) |>
-  mutate(kartierungsumfang = str_extract(noise_source, "major"), .after = noise_source) |>
+  mutate(agglomeration = if_else(str_detect(noise_source, "inside"),
+                                 "inside agglomerations",
+                                 "outside agglomerations"),
+    .after = noise_source) |>
+  mutate(mapping_extend = if_else(str_detect(noise_source, "major"),
+                                     "major sources",
+                                     "different sources"),
+         .after = noise_source) |>
   mutate(noise_source = str_replace_all(
     noise_source,
     c(
@@ -168,17 +174,94 @@ data_EEA <- read_excel(PATH_DATA_EEA_DE, col_types = col_types_vec) |>
       "major" = ""
     )
   ))|>
-  mutate(noise_source = str_squish(noise_source))
+  mutate(noise_source = str_squish(noise_source)) |>
+    mutate(location_or_all =
+           if_else(location == "all",
+                   "all Germany",
+                   "location specific"))
   
-
 data_EEA |>
-#  filter(!is.na(location))|>
-  ggplot(aes(x=noise_source,fill= agg)) +
-  geom_col(aes(y=inhabitants_lden_gf))+
-  facet_grid(cols=vars(kartierungsumfang),
-             rows=vars(is.na(location)))
-  
+  ggplot(aes(x = noise_source, fill = agglomeration)) +
+  geom_col(aes(y = inhabitants_lden_gf)) +
+  facet_grid(cols = vars(mapping_extend),
+             rows = vars(location_or_all))
+
 ```
+
+
+```{r}
+#| label: translate_EEA_community_names
+
+data_EEA<-data_EEA |>
+  mutate(name_stadt_gemeinde = translate_community_names_en_ger(location))
+
+```
+
+
+```{r}
+#| label: compare_EEA_EIONET_exposure_data
+data_EEA_summary <- data_EEA |>
+  select(
+    noise_source,
+    mapping_extend,
+    agglomeration,
+    inhabitants_lden_gf,
+    inhabitants_lnight_gf,
+    location_or_all,
+    name_stadt_gemeinde
+  ) |>
+  mutate(inhabitants_lden = inhabitants_lden_gf,
+    inhabitants_lnight = inhabitants_lnight_gf,
+    .keep = "unused") |>
+  pivot_longer(
+    cols = starts_with("inhabitants_"),
+    names_to = "metric",
+    names_prefix = "inhabitants_",
+    values_to = "sum_exposed"
+  ) |>
+  mutate(data_source = "EEA country factsheet")
+
+
+exposure_summary <- data |>
+  filter(!is.na(name_stadt_gemeinde)) |>
+  filter(country == "Germany") |>
+  summarise(
+    sum_exposed = sum(exponierte),
+    .by = c(
+      name_stadt_gemeinde,
+      metric,
+      noise_source,
+      mapping_extend,
+      data_source
+    )
+  )
+
+exp_sum_sum<-exposure_summary |>
+  summarise(
+    sum_exposed = sum(sum_exposed),
+    .by = c(metric, noise_source, mapping_extend, data_source)
+  ) |>
+  mutate(name_stadt_gemeinde = "all")
+
+
+exposure_summary<-
+  exposure_summary|>
+  bind_rows(exp_sum_sum)|>
+  bind_rows(data_EEA_summary)|>
+  mutate(location_or_all =
+           if_else(name_stadt_gemeinde == "all",
+                   "all Germany",
+                   "location specific"))
+
+
+exposure_summary |>
+  select(-agglomeration)|>
+  pivot_wider(names_from = data_source,
+              values_from = sum_exposed) |>
+  ggplot(aes(x=EEA,y=`EEA country factsheet`-EEA))+
+  geom_point(aes(color=mapping_extend))+
+  facet_grid(location_or_all+metric~noise_source)
+ ```
 
 ### Country codes
 
@@ -266,7 +349,7 @@ Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt. F
 
 ```{r gemeindedaten_anhaengen}
 ger_dataMitGKZ <- ger_data %>%
-  filter(datenquelle != "EEA") %>% 
+  filter(data_source != "EEA") %>% 
   left_join(gv_gemeinden, by = join_by(iso_code,
                                         bundesland_code,
                                         gemeinde_kennziffer))
@@ -276,32 +359,15 @@ ger_dataMitGKZ <- ger_data %>%
 Für den Teil ohne Gemeindekennziffer muss zunächst der Gemeindename einheitlich gepflegt werden
 
 ```{r gemeindedaten_GKZ_nachpflegen}
-ersetzungen <-
-  c(
-    "oe" = "ö",
-    "ae" = "ä",
-    "ue" = "ü",
-    "on the Main" = "am Main",
-    "on the Ruhr" = "an der Ruhr"
-  )
-uebersetzungen <- c(
-  "Brunswick" = "Braunschweig",
-  "Cologne" = "Köln",
-  "Freiburg" = "Freiburg im Breisgau",
-  "Halle" = "Halle (Saale)",
-  "Hanover" = "Hannover",
-  "Ludwigshafen" = "Ludwigshafen am Rhein",
-  "Munich" = "München",
-  "Nuremberg" = "Nürnberg",
-  "Oldenburg" = "Oldenburg (Oldenburg)"
-)
-
-ger_data_EEA <- ger_data %>%
-  filter(datenquelle == "EEA") %>%
-  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,ersetzungen)) %>%
-  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,uebersetzungen)) %>%
-  mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,"Mörs","Moers")) %>% 
-  select(-gemeinde_kennziffer,-geoschluessel_stellen,-bundesland_code)
+ger_data_EEA <- ger_data |>
+  filter(data_source == "EEA") |>
+  mutate(name_stadt_gemeinde = translate_community_names_en_ger(name_stadt_gemeinde)) |>
+  # mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,LETTER_REPLACEMENTS_EN_GER)) %>%
+  # mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,TRANSLATIONS_EN_GER)) %>%
+  # mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,"Mörs","Moers")) %>%
+  select(-gemeinde_kennziffer,
+         -geoschluessel_stellen,
+         -bundesland_code)
 
 EEArelevantGv <- gv_gemeinden %>%
   filter(str_detect(gemeinde_kennzeichnung, "tadt")) %>%
@@ -337,11 +403,11 @@ ger_dataOut %>%
   select(gemeinde_kennziffer,
          l_untergrenze,
          l_zentral,
-         metrik,
+         metric,
          exponierte,
-         quelle,
-         kartierungsumfang,
-         datenquelle) %>% 
+         noise_source,
+         mapping_extend,
+         data_source) %>% 
   write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"allExpo.csv"))
 
 ```
@@ -360,11 +426,11 @@ expoTab <-
     exponierte = sum(exponierte),
     bevoelkerung = first(bevoelkerung),
     .by = c(
-      datenquelle,
+      data_source,
       bundesland_code,
-      quelle,
-      metrik,
-      kartierungsumfang,
+      noise_source,
+      metric,
+      mapping_extend,
       gemeinde_kennziffer
     )
   ) %>%
@@ -373,22 +439,22 @@ expoTab <-
     AnzKartierteGemeinden = n(),
     bevoelkerung = sum(bevoelkerung),
     .by = c(
-      datenquelle,
+      data_source,
       bundesland_code,
-      quelle,
-      metrik,
-      kartierungsumfang
+      noise_source,
+      metric,
+      mapping_extend
     )
   )%>%
   pivot_wider(
-    names_from = kartierungsumfang,
+    names_from = mapping_extend,
     values_from = c(bevoelkerung,
                     exponierteGesamt, 
                     AnzKartierteGemeinden)
   )
 
 expoTab%>%
-  #  complete(bundesland_code, quelle, metrik) %>%
+  #  complete(bundesland_code, noise_source, metric) %>%
   knitr::kable()
 
 expoTab %>% 
@@ -398,8 +464,8 @@ expoTab %>%
 
 
 expoTab %>% 
-  filter(datenquelle=="EEA") %>% 
-  group_by(quelle,metrik) %>% 
+  filter(data_source=="EEA") %>% 
+  group_by(noise_source,metric) %>% 
   summarise(bevoelkerung_major=sum(bevoelkerung_major),
             bevoelkerung_all=sum(bevoelkerung_all),
             exponierteGesamt_major=sum(exponierteGesamt_major),
@@ -440,7 +506,7 @@ eur_agg_list<-read_delim(
          .keep="unused")
 
 eur_data<-data |>
-  filter(datenquelle == "EEA") |>
+  filter(data_source == "EEA") |>
   left_join(eur_agg_list,
             by = join_by(name_stadt_gemeinde,
                          country)) |>

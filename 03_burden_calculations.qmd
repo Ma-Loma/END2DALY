@@ -22,8 +22,8 @@ library(purrr)
 
 ```{r}
 #| label: load_shared_util_fkt
-source("scripts/utils.R")
 source("scripts/config.R")
+source("scripts/utils.R")
 dir.create("plots", showWarnings = F)
 ```
 

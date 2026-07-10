@@ -97,7 +97,7 @@ read_one_dataset <- function(meta_row) {
 #'
 #' **Output format (long):**
 #' - One row per (municipality × metric × exposure band)
-#' - Columns: gemeinde_kennziffer, metrik, l_untergrenze, l_zentral, exponierte
+#' - Columns: gemeinde_kennziffer, metric, l_untergrenze, l_zentral, exponierte
 #'
 #' @param data Tibble: raw exposure data (wide format)
 #'
@@ -135,14 +135,14 @@ lang_machen <- function(data) {
     pivot_longer(
       starts_with("anzahl"),
       names_sep = "_ab_",
-      names_to = c("metrik_raw", "l_untergrenze"),
+      names_to = c("metric_raw", "l_untergrenze"),
       values_to = "exponierte"
     ) %>%
     # Clean metric names & calculate central level
     mutate(
       l_untergrenze = as.numeric(l_untergrenze),
       l_zentral = l_untergrenze + 2,
-      metrik = str_remove(metrik_raw, "anzahl_belasteter_") %>%
+      metric = str_remove(metric_raw, "anzahl_belasteter_") %>%
                str_replace_all("l_night", "lnight"),
       .keep = "unused"
     ) %>%
@@ -213,7 +213,7 @@ validate_exposure_data <- function(data) {
   
   # Check metric names
   expected_metrics <- c("lden", "lnight")
-  unexpected <- setdiff(unique(data$metrik), expected_metrics)
+  unexpected <- setdiff(unique(data$metric), expected_metrics)
   if (length(unexpected) > 0) {
     warning("Unexpected metrics: ", paste(unexpected, collapse = ", "), 
             immediate. = TRUE)
@@ -223,7 +223,7 @@ validate_exposure_data <- function(data) {
   cat("\nExposure summary:\n")
   cat("  Total rows:", nrow(data), "\n")
   cat("  Unique municipalities:", n_distinct(data$gemeinde_kennziffer), "\n")
-  cat("  Metrics:", paste(unique(data$metrik), collapse = ", "), "\n")
+  cat("  Metrics:", paste(unique(data$metric), collapse = ", "), "\n")
   cat("  Sources:", paste(unique(data$datenquelle), collapse = ", "), "\n")
   cat("  Total exposed:", sum(data$exponierte, na.rm = TRUE), "persons\n\n")
   
@@ -568,4 +568,20 @@ standardize_health_results <- function(result_list) {
   result_list %>%
     map_df(~ select(., all_of(common_cols))) %>%
     return()
+}
+
+
+#' Translate names of communities from English to German 
+#'
+#' @param name a chr or column of chr with names of German communities written in english style
+#'
+#' @returns a chr or column of chr with names of German communities translated to German languae
+#' @export
+#'
+#' @examples
+translate_community_names_en_ger <- function(name){
+  out=str_replace_all(name,LETTER_REPLACEMENTS_EN_GER) |>
+    str_replace_all(TRANSLATIONS_EN_GER) |>
+    str_replace_all("Mörs","Moers")
+  return(out)
 }
