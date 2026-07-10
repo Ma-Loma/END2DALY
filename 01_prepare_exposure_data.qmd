@@ -150,31 +150,33 @@ col_types_vec <- setNames(
 )
 # Excel-Datei direkt mit den Typen einlesen
 data_EEA <- read_excel(PATH_DATA_EEA_DE, col_types = col_types_vec) |>
-  mutate(agg = str_detect(noise_source, "Inside"), .after = noise_source) |>
-  mutate(kartierungsumfang = str_extract(noise_source, "Major"), .after = noise_source) |>
+  mutate(noise_source = str_to_lower(noise_source))|>
+  mutate(agg = str_detect(noise_source, "inside"), .after = noise_source) |>
+  mutate(kartierungsumfang = str_extract(noise_source, "major"), .after = noise_source) |>
   mutate(noise_source = str_replace_all(
     noise_source,
     c(
-      "Airprots" = "air",
-      "Aircraft" = "air",
-      "Road Traffic" = "road",
-      "Railway Traffic" = "rail",
-      "Industrial Noise" = "industry",
-      " Inside Agglomerations" = "",
-      " Outside Agglomerations" = "",
-      "Major" = ""
+      "airprots" = "air",
+      "aircraft" = "air",
+      "road traffic" = "road",
+      "roads" = "road",
+      "railways" = "rail",
+      "railway traffic" = "rail",
+      "industrial noise" = "industry",
+      " inside agglomerations" = "",
+      " outside agglomerations" = "",
+      "major" = ""
     )
   ))|>
-  mutate(noise_source = str_squish(noise_source)) |>
-  mutate(noise_source = str_to_lower(noise_source),
-         kartierungsumfang = str_to_lower(kartierungsumfang))
+  mutate(noise_source = str_squish(noise_source))
   
 
 data_EEA |>
-  filter(!is.na(location))|>
+#  filter(!is.na(location))|>
   ggplot(aes(x=noise_source,fill= agg)) +
   geom_col(aes(y=inhabitants_lden_gf))+
-  facet_grid(vars(kartierungsumfang))
+  facet_grid(cols=vars(kartierungsumfang),
+             rows=vars(is.na(location)))
   
 ```
 
