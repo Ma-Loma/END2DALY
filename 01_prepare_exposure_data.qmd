@@ -102,6 +102,7 @@ for (i in 1:nrow(meta)) {
       bundesland_code        = metadatazeile$bundesland_code,
       noise_source            = metadatazeile$noise_source,
       mapping_extend = metadatazeile$mapping_extend,
+      agglomeration = metadatazeile$agglomeration,
       data_source = metadatazeile$data_source
     )
   cat("... und ins lange Format formatiert.\n")
@@ -188,7 +189,6 @@ data_EEA |>
 
 ```
 
-
 ```{r}
 #| label: translate_EEA_community_names
 
@@ -196,7 +196,6 @@ data_EEA<-data_EEA |>
   mutate(name_stadt_gemeinde = translate_community_names_en_ger(location))
 
 ```
-
 
 ```{r}
 #| label: compare_EEA_EIONET_exposure_data
@@ -231,6 +230,7 @@ exposure_summary <- data |>
       name_stadt_gemeinde,
       metric,
       noise_source,
+      agglomeration,
       mapping_extend,
       data_source
     )
@@ -239,7 +239,7 @@ exposure_summary <- data |>
 exp_sum_sum<-exposure_summary |>
   summarise(
     sum_exposed = sum(sum_exposed),
-    .by = c(metric, noise_source, mapping_extend, data_source)
+    .by = c(metric, noise_source,agglomeration, mapping_extend, data_source)
   ) |>
   mutate(name_stadt_gemeinde = "all")
 
@@ -254,14 +254,21 @@ exposure_summary<-
                    "location specific"))
 
 
+bla<-
 exposure_summary |>
-  select(-agglomeration)|>
+  filter(data_source!="Bundesland") |>
+#  filter(noise_source!="industry") |>
+#  select(-agglomeration)|>
   pivot_wider(names_from = data_source,
-              values_from = sum_exposed) |>
-  ggplot(aes(x=EEA,y=`EEA country factsheet`-EEA))+
-  geom_point(aes(color=mapping_extend))+
-  facet_grid(location_or_all+metric~noise_source)
- ```
+              values_from = sum_exposed) #|>
+
+bla |>
+  ggplot(aes(x=EEA,
+             y=`EEA country factsheet`-EEA))+
+  geom_point(aes(color=mapping_extend,
+                 shape=agglomeration))+
+  facet_grid(location_or_all+metric~noise_source,scales="free_y")
+```
 
 ### Country codes
 
@@ -476,8 +483,6 @@ expoTab %>%
   write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"Expositionszusammenfassung_EEA.csv"))
 ```
 
-
-
 ## European exposure data
 
 Similar to the abeovementioned German data, here for the all european exposure data.
@@ -520,4 +525,3 @@ eur_data |>
   write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"eur_Expo.csv"))
 
 ```
-
