@@ -89,6 +89,10 @@ for (i in 1:nrow(meta)) {
       ds<-ds %>%
         mutate(country="Germany")
     }
+  if (!metadatazeile$is_location_specific){
+    ds<-ds %>%
+      mutate(name_stadt_gemeinde="all")
+  }
   ds<-ds%>%
     mutate(gemeinde_kennziffer = if ("gemeinde_kennziffer" %in% names(.))
       as.character(gemeinde_kennziffer)
@@ -189,6 +193,8 @@ data_EEA |>
 
 ```
 
+As the EEA-country fact sheet uses English names of the communites (/"locations") we translate them to German.
+
 ```{r}
 #| label: translate_EEA_community_names
 
@@ -196,6 +202,8 @@ data_EEA<-data_EEA |>
   mutate(name_stadt_gemeinde = translate_community_names_en_ger(location))
 
 ```
+
+The comparison between EEA country factsheet and the EIONET provided exposure data does not show any differences between the total number of persons exposed in different locations.
 
 ```{r}
 #| label: compare_EEA_EIONET_exposure_data
@@ -223,6 +231,7 @@ data_EEA_summary <- data_EEA |>
 
 exposure_summary <- data |>
   filter(!is.na(name_stadt_gemeinde)) |>
+  filter(name_stadt_gemeinde != "all") |>
   filter(country == "Germany") |>
   summarise(
     sum_exposed = sum(exponierte),
@@ -236,6 +245,23 @@ exposure_summary <- data |>
     )
   )
 
+# here use the rows with exposures already summed over different locations
+predefined_exp_sum<-data |>
+  filter(country == "Germany") |>
+  filter(name_stadt_gemeinde == "all") |>
+  summarise(
+    sum_exposed = sum(exponierte),
+    .by = c(
+      metric,
+      noise_source,
+      agglomeration,
+      mapping_extend,
+      data_source,
+      name_stadt_gemeinde
+    )
+  )
+
+# here use the location specific rows and summed over different locations
 exp_sum_sum<-exposure_summary |>
   summarise(
     sum_exposed = sum(sum_exposed),
@@ -247,27 +273,25 @@ exp_sum_sum<-exposure_summary |>
 exposure_summary<-
   exposure_summary|>
   bind_rows(exp_sum_sum)|>
+  bind_rows(predefined_exp_sum) |>
   bind_rows(data_EEA_summary)|>
   mutate(location_or_all =
            if_else(name_stadt_gemeinde == "all",
                    "all Germany",
                    "location specific"))
 
-
-bla<-
 exposure_summary |>
   filter(data_source!="Bundesland") |>
 #  filter(noise_source!="industry") |>
 #  select(-agglomeration)|>
   pivot_wider(names_from = data_source,
-              values_from = sum_exposed) #|>
-
-bla |>
+              values_from = sum_exposed) |>
   ggplot(aes(x=EEA,
              y=`EEA country factsheet`-EEA))+
   geom_point(aes(color=mapping_extend,
                  shape=agglomeration))+
-  facet_grid(location_or_all+metric~noise_source,scales="free_y")
+  facet_grid(location_or_all+metric~noise_source,scales="free_y")+
+  labs(title = "Comparison of the sums of exposed in different categories")
 ```
 
 ### Country codes
