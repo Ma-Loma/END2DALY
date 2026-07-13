@@ -1,11 +1,13 @@
-Feldname	Erklärung
+field name	explanation
 bundesland_code	Zweistellige Zahl zwischen 01 und 16
-quelle	Welche Lärmart
-kartierungsumfang	MAJOR oder MINOR
-pfad	
-tabellenblatt	
-spaltennamen	
+noise_sourc	which source of noise (rail, road, air or industry)
+mapping_extend	"different sources" or "major sources"
+agglomeration	"inside agglomerations" or "outside agglomerations" or NA (if not uniform over dataset)
+pfad	path of dataset
+tabellenblatt	sheet dame
+spaltennamen	path to metadataset with row names
 zeilen_weglassen	
 zeilen_gesamt	
 datensatz_id	
 geoschluessel_stellen	aus wie vielen Ziffern besteht der Geoschlüssel? Also AGS oder GKZ.
+is_sum	TRUE or FALSE: describing wh
