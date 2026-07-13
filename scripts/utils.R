@@ -77,7 +77,7 @@ read_one_dataset <- function(meta_row) {
     ) %>%
       mutate(
         geoschluessel_stellen = meta_row$geoschluessel_stellen,
-        datenquelle = meta_row$datenquelle,
+        data_source = meta_row$data_source,
         .before = 1
       ),
     error = function(e) {
