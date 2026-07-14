@@ -382,6 +382,8 @@ gv_gemeinden <-
 Die so gewonnenen Gemeindedaten werden nun an die Expositionsdaten angehängt. Für den Teil, in dem schon die Gemeindekennziffer existiert ist dies einfach
 
 ```{r gemeindedaten_anhaengen}
+
+
 ger_dataMitGKZ <- ger_data %>%
   filter(data_source != "EEA") %>% 
   left_join(gv_gemeinden, by = join_by(iso_code,
@@ -393,15 +395,14 @@ ger_dataMitGKZ <- ger_data %>%
 Für den Teil ohne Gemeindekennziffer muss zunächst der Gemeindename einheitlich gepflegt werden
 
 ```{r gemeindedaten_GKZ_nachpflegen}
-ger_data_country_fs_EEA <- ger_data |>
+ger_data_EEA <- ger_data |>
   filter(data_source == "EEA") |>
-  mutate(name_stadt_gemeinde = translate_community_names_en_ger(name_stadt_gemeinde)) |>
+  mutate(name_stadt_gemeinde = 
+           translate_community_names_en_ger(name_stadt_gemeinde)) |>
   # mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,LETTER_REPLACEMENTS_EN_GER)) %>%
   # mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,TRANSLATIONS_EN_GER)) %>%
   # mutate(name_stadt_gemeinde=str_replace_all(name_stadt_gemeinde,"Mörs","Moers")) %>%
-  select(-gemeinde_kennziffer,
-         -geoschluessel_stellen,
-         -bundesland_code)
+  select(-gemeinde_kennziffer,-geoschluessel_stellen,-bundesland_code)
 
 EEArelevantGv <- gv_gemeinden %>%
   filter(str_detect(gemeinde_kennzeichnung, "tadt")) %>%
@@ -409,19 +410,19 @@ EEArelevantGv <- gv_gemeinden %>%
            str_split_fixed(gemeinde_bezeichnung, ",", 2)[, 1]) %>%
   mutate(name_stadt_gemeinde = str_squish(name_stadt_gemeinde))
 
-ger_data_country_fs_EEAMitGKZ <- EEArelevantGv %>%
-  right_join(ger_data_country_fs_EEA, by = join_by(iso_code,
+ger_data_EEAMitGKZ <- EEArelevantGv %>%
+  right_join(ger_data_EEA, by = join_by(iso_code,
                                         name_stadt_gemeinde)) %>%
   mutate(geoschluessel_stellen = str_length(gemeinde_kennziffer)) %>%
   mutate(bundesland_code = str_sub(gemeinde_kennziffer, 1, 2))
 
-ger_data_country_fs_EEAMitGKZ %>%
+ger_data_EEAMitGKZ %>%
   filter(is.na(gemeinde_kennziffer)) %>%
   select(name_stadt_gemeinde) %>%
   unique()
 
 ger_dataOut <-
-  bind_rows(ger_dataMitGKZ, ger_data_country_fs_EEAMitGKZ)
+  bind_rows(ger_dataMitGKZ, ger_data_EEAMitGKZ)
 ```
 
 ```{r datenexport}
@@ -441,6 +442,7 @@ ger_dataOut %>%
          exponierte,
          noise_source,
          mapping_extend,
+         agglomeration,
          data_source) %>% 
   write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"allExpo.csv"))
 

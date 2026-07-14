@@ -111,6 +111,13 @@ eurExpo <- read_delim(
 )|>
   filter(!is.na(name_stadt_gemeinde))
 
+meta_EEA<- read_delim(PATH_METADATA_EEA_DE,
+                       col_types = cols(.default = "c"),
+                       delim = ";")
+
+data_country_fs_EEA <-
+  read.delim(paste0(PATH_EXPO_OUTPUT,"EEA_country_fs_ger.csv"),
+             sep = ";")
 
 ```
 
@@ -157,23 +164,6 @@ Hier gibts eine breite Tabelle, sollte später noch mehr Richtung saubere Datenb
 allExpo_w <- allExpo %>%
   left_join(gemeinden_daten, by = join_by("gemeinde_kennziffer"))
 
-# # Export some exposures
-# allExpo_w |>
-#   filter(quelle == "Straße") |>
-#   filter(kartierungsumfang == "all") |>
-#   filter(datenquelle == "EEA") |>
-#   summarise(
-#     # n = n(),
-#     exponierte = sum(exponierte),
-#     #.by=) %>%
-#     .by = c(
-#       #gemeinde_bezeichnung,
-#       metrik,
-#       l_untergrenze
-#     )
-#   ) |>
-#   pivot_wider(names_from = l_untergrenze, values_from = exponierte) |>
-#   write_tsv("agg_road_EEA_Germany.csv")
 ```
 
 ## Expositionsdaten und ERF-Funktionen zusammenführen
@@ -185,13 +175,12 @@ dat_exp_ERF <- allExpo_w %>%
   mutate(
     source =
       replace_values(
-        quelle,
+        noise_source,
         "Straße" ~ "road",
         "Flug" ~ "air",
         "Industrie" ~ "industry",
         "Schiene" ~ "rail"
       ),
-    metric = metrik,
     .keep = "unused"
   ) %>%
   left_join(functionsETCHE,
@@ -212,7 +201,7 @@ dat_exp_ERF %>%
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
             bhd=first(bhd),
-            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>%
+            .by=c(source,data_source,mapping_extend,outcome,population_type)) %>%
   knitr::kable(format="simple")
 ```
 
@@ -226,7 +215,7 @@ dat_exp_ERF %>%
   multiply_with_age_fraction(.) %>% 
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
-            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>% 
+            .by=c(source,data_source,mapping_extend,outcome,population_type)) %>% 
   knitr::kable(format="simple")
 ```
 
@@ -239,8 +228,8 @@ Here, we filter the overall exposure data to use only the exposure data provided
 #| label: health-impacts-eea
 
 datEEA_all <- dat_exp_ERF %>%
-  filter(datenquelle == "EEA",
-         kartierungsumfang == "all")
+  filter(data_source == "EEA",
+         mapping_extend == "all")
 
 # Calculate both absolute and relative risk
 resEEA_ar <- datEEA_all %>% 
@@ -267,7 +256,7 @@ The same for data provided directly from the Bundesländer; here starting only w
 ```{r}
 #| label: health-impacts-bundesland_maj
 datBundesland <- dat_exp_ERF %>%
-  filter(datenquelle == "Bundesland")
+  filter(data_source == "Bundesland")
 
 resBundesland_ar <- datBundesland %>%
   filter(risk_type=="absolute_risk") %>% 
@@ -297,9 +286,9 @@ allExpo_w %>%
   filter(bundesland_code==HESSEN_BUNDESLAND_CODE) %>% 
   ggplot(aes(x = l_untergrenze, y = exponierte, fill = kreis_name)) +
   geom_col() +
-  facet_grid(rows=vars(metrik),cols=vars(datenquelle,quelle,kartierungsumfang)) +
+  facet_grid(rows=vars(metric),cols=vars(data_source,noise_source,mapping_extend)) +
   labs(
-    title = "Lärmbelastung in Hessen nach Kreisen, Quelle und Lärmmetrik",
+    title = "Lärmbelastung in Hessen nach Kreisen, Lärmquelle und Lärmmetric",
     x = "Lärmpegel in dB",
     y = "Anzahl exponierter Personen"
   ) +
@@ -327,7 +316,7 @@ resEEA_all %>%
   ggplot(aes(x = outcome, fill = bundesland_name, y = impact)) +
   geom_col() +
   # facet_grid(rows = vars(metric, outcome),
-  #            cols = vars(kartierungsumfang)) +
+  #            cols = vars(mapping_extend)) +
   # labs(
   #   title = "Lärmbedingte Krankheitslast errechnet aus \nULR-Belastetenzahlen in den Ballungsräumen",
   #   x = "Endpunkt",
@@ -339,7 +328,7 @@ resEEA_all %>%
     y = "Attributable burden [DALY/year]"
   ) +
     facet_grid(cols = vars(source),
-               rows = vars(kartierungsumfang))+
+               rows = vars(mapping_extend))+
   guides(fill = guide_legend(title = "Bundesland"))+
  # scale_y_continuous(breaks = NULL)+
     theme_gray(base_size = 15)+
@@ -394,7 +383,7 @@ res_KAGZRM %>%
   #  scale_y_continuous(breaks = NULL)+
   theme_gray(base_size = 15) +
   facet_grid(cols = vars(source),
-             rows = vars(kartierungsumfang))
+             rows = vars(mapping_extend))
 ggsave("plots/allKAGZRM_major.png")
 ```
 
