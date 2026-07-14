@@ -42,13 +42,13 @@ read_colnames <- function(path) {
 #'   - zeilen_gesamt: max rows to read
 #'   - spaltennamen: path to column names text file
 #'   - geoschluessel_stellen: geocode format
-#'   - datenquelle: data source name (HLNUG, BW, EEA, etc.)
+#'   - data_source: data source name (HLNUG, BW, EEA, etc.)
 #'
 #' @return Tibble with raw exposure data plus metadata columns
 #'
 #' @details
 #' - Applies NA patterns for common missing value codes
-#' - Adds metadata columns: geoschluessel_stellen, datenquelle
+#' - Adds metadata columns: geoschluessel_stellen, data_source
 #' - Stops with informative error if file not found or read fails
 #'
 read_one_dataset <- function(meta_row) {
@@ -224,7 +224,7 @@ validate_exposure_data <- function(data) {
   cat("  Total rows:", nrow(data), "\n")
   cat("  Unique municipalities:", n_distinct(data$gemeinde_kennziffer), "\n")
   cat("  Metrics:", paste(unique(data$metric), collapse = ", "), "\n")
-  cat("  Sources:", paste(unique(data$datenquelle), collapse = ", "), "\n")
+  cat("  Sources:", paste(unique(data$data_source), collapse = ", "), "\n")
   cat("  Total exposed:", sum(data$exponierte, na.rm = TRUE), "persons\n\n")
   
   invisible(data)
@@ -383,7 +383,7 @@ check_exp_single_erf_exp <- function(dat) {
 #'
 #' @details checks data (single exposure scenario and single ERF)
 #' then passes it to healthiar::attribute_health.
-#' The information of source,metric,outcome,datenquelle,kartierungsumfang is piped through using the info field.
+#' The information of source,metric,outcome,data_source,mapping_extend is piped through using the info field.
 #' 
 #' @examples
 calc_macro_ar_impact <- function(dat) {
@@ -401,7 +401,7 @@ calc_macro_ar_impact <- function(dat) {
         geo_id_macro = .$bundesland_code,
         dw_central = .$DW,
         duration_central = 1,
-        info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
+        info = select(.,source,metric,outcome,data_source,mapping_extend)
       )
     } %>%
     .$health_detailed %>%
@@ -410,8 +410,8 @@ calc_macro_ar_impact <- function(dat) {
       source = info_column_1,
       metric = info_column_2,
       outcome = info_column_3,
-      datenquelle = info_column_4,
-      kartierungsumfang=info_column_5,
+      data_source = info_column_4,
+      mapping_extend=info_column_5,
       .keep="unused"
     )
 }
@@ -458,7 +458,7 @@ calc_macro_rr_impact <- function(dat) {
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
         duration_central = 1,
-        info = select(., source, metric, outcome, datenquelle, kartierungsumfang)
+        info = select(., source, metric, outcome, data_source, mapping_extend)
       )
     } %>%
     .$health_detailed %>%
@@ -467,8 +467,8 @@ calc_macro_rr_impact <- function(dat) {
       source = info_column_1,
       metric = info_column_2,
       outcome = info_column_3,
-      datenquelle = info_column_4,
-      kartierungsumfang = info_column_5,
+      data_source = info_column_4,
+      mapping_extend = info_column_5,
       .keep = "unused"
     )
 }
@@ -493,7 +493,7 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
   
   outc_sourc_metr_liste <- dat %>%
     filter(risk_type == risk_approach) %>%
-    select(source, metric, outcome, datenquelle, kartierungsumfang) %>%
+    select(source, metric, outcome, data_source, mapping_extend) %>%
     unique()
   
   if (nrow(outc_sourc_metr_liste) == 0) {
@@ -513,15 +513,15 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
         outcome == zeile$outcome,
         source == zeile$source,
         metric == zeile$metric,
-        datenquelle == datenquelle,
-        kartierungsumfang == kartierungsumfang
+        data_source == data_source,
+        mapping_extend == mapping_extend
       )
     
     dat_subset |>
       summarise(
         n = n(),
         expon = sum(exponierte),
-        .by = c(metric, source, kartierungsumfang, datenquelle, outcome)
+        .by = c(metric, source, mapping_extend, data_source, outcome)
       ) |>
       print()
     
