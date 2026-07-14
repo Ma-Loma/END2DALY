@@ -229,7 +229,7 @@ Here, we filter the overall exposure data to use only the exposure data provided
 
 datEEA_all <- dat_exp_ERF %>%
   filter(data_source == "EEA",
-         mapping_extend == "all")
+         mapping_extend == "different sources")
 
 # Calculate both absolute and relative risk
 resEEA_ar <- datEEA_all %>% 
@@ -286,7 +286,7 @@ allExpo_w %>%
   filter(bundesland_code==HESSEN_BUNDESLAND_CODE) %>% 
   ggplot(aes(x = l_untergrenze, y = exponierte, fill = kreis_name)) +
   geom_col() +
-  facet_grid(rows=vars(metric),cols=vars(data_source,noise_source,mapping_extend)) +
+  facet_grid(rows=vars(metric,agglomeration),cols=vars(data_source,noise_source,mapping_extend)) +
   labs(
     title = "Lärmbelastung in Hessen nach Kreisen, Lärmquelle und Lärmmetric",
     x = "Lärmpegel in dB",
