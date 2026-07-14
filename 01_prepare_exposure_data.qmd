@@ -497,12 +497,12 @@ expoTab %>%
 expoTab %>% 
   filter(data_source=="EEA") %>% 
   group_by(noise_source,metric) %>% 
-  summarise(bevoelkerung_major=sum(bevoelkerung_major),
-            bevoelkerung_all=sum(bevoelkerung_all),
-            exponierteGesamt_major=sum(exponierteGesamt_major),
-            exponierteGesamt_all=sum(exponierteGesamt_all),
-            AnzKartierteGemeinden_major=sum(AnzKartierteGemeinden_major),
-            AnzKartierteGemeinden_all=sum(AnzKartierteGemeinden_all),
+  summarise(`bevoelkerung_major sources`=sum(`bevoelkerung_major sources`),
+            `bevoelkerung_different sources`=sum(`bevoelkerung_different sources`),
+            `exponierteGesamt_major sources`=sum(`exponierteGesamt_major sources`),
+            `exponierteGesamt_different sources`=sum(`exponierteGesamt_different sources`),
+            `AnzKartierteGemeinden_major sources`=sum(`AnzKartierteGemeinden_major sources`),
+            `AnzKartierteGemeinden_different sources`=sum(`AnzKartierteGemeinden_different sources`),
             ) %>% 
   write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"Expositionszusammenfassung_EEA.csv"))
 ```
