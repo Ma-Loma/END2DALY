@@ -254,7 +254,7 @@ resEEA_all <- resEEA_ar |>
 The same for data provided directly from the Bundesländer; here starting only with those calculating the major sources.
 
 ```{r}
-#| label: health-impacts-bundesland_maj
+#| label: health-impacts-bundesland
 datBundesland <- dat_exp_ERF %>%
   filter(data_source == "Bundesland")
 
@@ -288,7 +288,7 @@ allExpo_w %>%
   geom_col() +
   facet_grid(rows=vars(metric,agglomeration),cols=vars(data_source,noise_source,mapping_extend)) +
   labs(
-    title = "Lärmbelastung in Hessen nach Kreisen, Lärmquelle und Lärmmetric",
+    title = "Lärmbelastung in Hessen nach Kreisen, Lärmquelle und Lärmmetrik",
     x = "Lärmpegel in dB",
     y = "Anzahl exponierter Personen"
   ) +
