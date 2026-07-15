@@ -14,6 +14,8 @@ packagelist <- c(
   "remotes",
   "terra",
   "sf",
-  "exactextractr"
+  "exactextractr",
+  "healtiar"
 )
 install.packages(packagelist, lib="C:/Users/lochmannm/Documents/R/library-4.6.1")
+
