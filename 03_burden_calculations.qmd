@@ -8,7 +8,7 @@ bibliography: references.bib
 ```{r setup, include=FALSE}
 # Bibliotheken laden
 rm(list = ls())
-.libPaths("C:/Users/lochmannm/Documents/R/library-4.6")
+.libPaths("C:/Users/lochmannm/Documents/R/library-4.6.1")
 #.libPaths("M:/R/library-4.6")
 #falls aktuellster healthiar gewünscht; diese Lade-Methode funkioniert u.U. nicht auf allen Rechnern
 # library(remotes)

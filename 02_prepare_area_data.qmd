@@ -10,7 +10,7 @@ execute:
 
 ```{r front_matter}
 rm(list = ls())
-.libPaths("M:/R/library-4.6")
+.libPaths("M:/R/library-4.6.1")
 library(tidyverse)
 library(readxl)
 library(flextable)

@@ -1,4 +1,4 @@
-.libPaths("M:/R/library-4.6.1")
+.libPaths("C:/Users/lochmannm/Documents/R/library-4.6.1")
 packagelist <- c(
 #  "arrow", 
 #  "dbplyr",
@@ -16,4 +16,4 @@ packagelist <- c(
   "sf",
   "exactextractr"
 )
-install.packages(packagelist, lib="M:/R/library-4.6.1")
+install.packages(packagelist, lib="C:/Users/lochmannm/Documents/R/library-4.6.1")
