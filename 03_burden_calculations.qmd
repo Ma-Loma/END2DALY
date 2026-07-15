@@ -135,7 +135,7 @@ functionsETCHE |>
                     ))) |>
   unnest(data) |>
   ggplot(aes(c, y)) +
-  geom_line(aes(linetype = metric, color = source)) +
+  geom_line(aes(linetype = metric, color = noise_source)) +
   geom_vline(aes(xintercept = threshold)) +
   facet_wrap(vars(function_label),
     labeller = labeller(function_label = label_wrap_gen(width = 10))
@@ -173,7 +173,7 @@ Um die Umweltbedingte Krankheitslast zu berechnen, braucht healthiar ein datafra
 ```{r merge-exposure-erf}
 dat_exp_ERF <- allExpo_w %>%
   mutate(
-    source =
+    noise_source =
       replace_values(
         noise_source,
         "Straße" ~ "road",
@@ -184,7 +184,7 @@ dat_exp_ERF <- allExpo_w %>%
     .keep = "unused"
   ) %>%
   left_join(functionsETCHE,
-            by = join_by(source, metric),
+            by = join_by(noise_source, metric),
             relationship = "many-to-many") %>%
   mutate(threshold = replace_na(threshold, 0)) |>
   left_join(baselineETCHE|>
@@ -201,7 +201,7 @@ dat_exp_ERF %>%
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
             bhd=first(bhd),
-            .by=c(source,data_source,mapping_extend,outcome,population_type)) %>%
+            .by=c(noise_source,data_source,mapping_extend,outcome,population_type)) %>%
   knitr::kable(format="simple")
 ```
 
@@ -215,7 +215,7 @@ dat_exp_ERF %>%
   multiply_with_age_fraction(.) %>% 
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
-            .by=c(source,data_source,mapping_extend,outcome,population_type)) %>% 
+            .by=c(noise_source,data_source,mapping_extend,outcome,population_type)) %>% 
   knitr::kable(format="simple")
 ```
 
@@ -265,7 +265,7 @@ resBundesland_ar <- datBundesland %>%
 
 resBundesland_rr <- datBundesland %>%
   filter(risk_type=="relative_risk") %>% 
-  filter(source == "air") %>% 
+  filter(noise_source == "air") %>% 
 #  multiply_with_age_fraction() %>% 
   calc_health_impact(risk_approach = "relative_risk")
 
@@ -327,8 +327,8 @@ resEEA_all %>%
     x = "outcome",
     y = "Attributable burden [DALY/year]"
   ) +
-    facet_grid(cols = vars(source),
-               rows = vars(mapping_extend))+
+    facet_grid(cols = vars(noise_source),
+               rows = vars(mapping_extend,agglomeration))+
   guides(fill = guide_legend(title = "Bundesland"))+
  # scale_y_continuous(breaks = NULL)+
     theme_gray(base_size = 15)+
@@ -382,16 +382,16 @@ res_KAGZRM %>%
   #guides(fill = guide_legend(title = "Kreis"))+
   #  scale_y_continuous(breaks = NULL)+
   theme_gray(base_size = 15) +
-  facet_grid(cols = vars(source),
+  facet_grid(cols = vars(noise_source),
              rows = vars(mapping_extend))
 ggsave("plots/allKAGZRM_major.png")
 ```
 
 ```{r}
 #| label: alleEEAresult
-resEEA_all %>% 
-  group_by(source,outcome) %>% 
+resEEA_all |> 
   summarize(DALY=sum(impact,na.rm = TRUE),
-            avg_paf=mean(pop_fraction,na.rm = TRUE)) %>% 
+            avg_paf=mean(pop_fraction,na.rm = TRUE),
+            .by=c(noise_source,outcome,agglomeration)) %>% 
   knitr::kable(format="simple")
 ```

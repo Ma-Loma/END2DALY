@@ -366,7 +366,7 @@ check_exp_single_erf_exp <- function(dat) {
     summarise(n = n(),
               .by = c(gemeinde_kennziffer,
                       l_zentral,
-                      source))
+                      noise_source))
   ifelse(lzentr_gembez_df$n %>%
            max(.) > 1, stop(
              "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single exposure scenario!",
@@ -383,7 +383,7 @@ check_exp_single_erf_exp <- function(dat) {
 #'
 #' @details checks data (single exposure scenario and single ERF)
 #' then passes it to healthiar::attribute_health.
-#' The information of source,metric,outcome,data_source,mapping_extend is piped through using the info field.
+#' The information of noise_source,metric,outcome,data_source,mapping_extend is piped through using the info field.
 #' 
 #' @examples
 calc_macro_ar_impact <- function(dat) {
@@ -401,17 +401,18 @@ calc_macro_ar_impact <- function(dat) {
         geo_id_macro = .$bundesland_code,
         dw_central = .$DW,
         duration_central = 1,
-        info = select(.,source,metric,outcome,data_source,mapping_extend)
+        info = select(.,noise_source,metric,outcome,data_source,mapping_extend,agglomeration)
       )
     } %>%
     .$health_detailed %>%
     .$results_raw %>%
     mutate(
-      source = info_column_1,
+      noise_source = info_column_1,
       metric = info_column_2,
       outcome = info_column_3,
       data_source = info_column_4,
       mapping_extend=info_column_5,
+      agglomeration = info_column_6,
       .keep="unused"
     )
 }
@@ -437,7 +438,7 @@ calc_macro_rr_impact <- function(dat) {
   }
   
   lzentr_gembez_df <- dat %>%
-    group_by(gemeinde_kennziffer, l_zentral, source) %>%
+    group_by(gemeinde_kennziffer, l_zentral, noise_source) %>%
     summarise(n = n(), .groups = "drop")
   
   if (max(lzentr_gembez_df$n) > 1) {
@@ -458,17 +459,18 @@ calc_macro_rr_impact <- function(dat) {
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
         duration_central = 1,
-        info = select(., source, metric, outcome, data_source, mapping_extend)
+        info = select(., noise_source, metric, outcome, data_source, mapping_extend,agglomeration)
       )
     } %>%
     .$health_detailed %>%
     .$results_raw %>%
     mutate(
-      source = info_column_1,
+      noise_source = info_column_1,
       metric = info_column_2,
       outcome = info_column_3,
       data_source = info_column_4,
       mapping_extend = info_column_5,
+      agglomeration = info_column_6,
       .keep = "unused"
     )
 }
@@ -493,7 +495,7 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
   
   outc_sourc_metr_liste <- dat %>%
     filter(risk_type == risk_approach) %>%
-    select(source, metric, outcome, data_source, mapping_extend) %>%
+    select(noise_source, metric, outcome, data_source, mapping_extend,agglomeration) %>%
     unique()
   
   if (nrow(outc_sourc_metr_liste) == 0) {
@@ -511,7 +513,7 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
     dat_subset <- dat %>%
       filter(
         outcome == zeile$outcome,
-        source == zeile$source,
+        noise_source == zeile$noise_source,
         metric == zeile$metric,
         data_source == zeile$data_source,
         mapping_extend == zeile$mapping_extend
@@ -521,7 +523,7 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
       summarise(
         n = n(),
         expon = sum(exponierte),
-        .by = c(metric, source, mapping_extend, data_source, outcome)
+        .by = c(metric, noise_source, mapping_extend, data_source, outcome)
       ) |>
       print()
     
@@ -532,7 +534,7 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
     else if (any(is.na(dat_subset$bhd))) {
       warning(
         zeile$outcome,
-        zeile$source,
+        zeile$noise_source,
         zeile$metric,
         " skipped, as at least one bhd is NA: ",
         paste(unique(dat_subset$bhd), collapse = ", ")
