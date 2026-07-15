@@ -513,8 +513,8 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
         outcome == zeile$outcome,
         source == zeile$source,
         metric == zeile$metric,
-        data_source == data_source,
-        mapping_extend == mapping_extend
+        data_source == zeile$data_source,
+        mapping_extend == zeile$mapping_extend
       )
     
     dat_subset |>
