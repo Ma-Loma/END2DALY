@@ -18,4 +18,5 @@ packagelist <- c(
   "healtiar"
 )
 install.packages(packagelist, lib="C:/Users/lochmannm/Documents/R/library-4.6.1")
-
+## In case, you want to develop R-packages
+#install.packages(c("devtools", "roxygen2", "testthat", "knitr"))
