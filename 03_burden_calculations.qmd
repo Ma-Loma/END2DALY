@@ -228,8 +228,7 @@ Here, we filter the overall exposure data to use only the exposure data provided
 #| label: health-impacts-eea
 
 datEEA_all <- dat_exp_ERF %>%
-  filter(data_source == "EEA",
-         mapping_extend == "different sources")
+  filter(data_source == "EEA")
 
 # Calculate both absolute and relative risk
 resEEA_ar <- datEEA_all %>% 

@@ -60,3 +60,6 @@ TRANSLATIONS_EN_GER <- c(
 # Create output directory if needed
 dir.create(PATH_EXPO_OUTPUT, recursive = TRUE, showWarnings = FALSE)
 dir.create(PATH_AREA_OUTPUT, recursive = TRUE, showWarnings = FALSE)
+
+# Common grouping columns
+GROUP_COLS <- c("noise_source", "metric", "outcome", "data_source", "mapping_extend", "agglomeration")

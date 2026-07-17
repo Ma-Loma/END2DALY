@@ -475,6 +475,28 @@ calc_macro_rr_impact <- function(dat) {
     )
 }
 
+#' Check data list and stop if NA in grouping column
+#'
+#' @returns nothing, but stops if not fails
+#' @export
+#'
+#' @examples
+stop_if_na_in_grouping <- function (df){
+  # 1. Check for NA values in grouping columns
+  na_rows <- df[rowSums(is.na(df[GROUP_COLS])) > 0, ]
+  
+  # 2. Halt execution and print summary if NA rows exist
+  if (nrow(na_rows) > 0) {
+    print("Summary of rows with missing grouping data:")
+    na_rows |> 
+      dplyr::select(dplyr::any_of("gemeinde_kennziffer"), dplyr::all_of(GROUP_COLS)) |> 
+      print()
+    
+    stop("Execution stopped: Found ", nrow(na_rows), " rows with NA in the grouping columns!")
+  }
+  
+}
+
 #' Calculate health impact for any risk approach
 #'
 #' @param dat data frame with exposure and ERF data
@@ -493,9 +515,16 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
          call. = FALSE)
   }
   
+  stop_if_na_in_grouping(dat)
+  
   outc_sourc_metr_liste <- dat %>%
     filter(risk_type == risk_approach) %>%
-    select(noise_source, metric, outcome, data_source, mapping_extend,agglomeration) %>%
+    select(noise_source,
+           metric,
+           outcome,
+           data_source,
+           mapping_extend,
+           agglomeration) %>%
     unique()
   
   if (nrow(outc_sourc_metr_liste) == 0) {
@@ -516,14 +545,15 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
         noise_source == zeile$noise_source,
         metric == zeile$metric,
         data_source == zeile$data_source,
-        mapping_extend == zeile$mapping_extend
+        mapping_extend == zeile$mapping_extend,
+        agglomeration == zeile$agglomeration
       )
     
     dat_subset |>
       summarise(
         n = n(),
         expon = sum(exponierte),
-        .by = c(metric, noise_source, mapping_extend, data_source, outcome)
+        .by = all_of(GROUP_COLS)
       ) |>
       print()
     
@@ -547,7 +577,6 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
   
   return(outcome_all)
 }
-
 
 
 #' Standardize health impact output format
