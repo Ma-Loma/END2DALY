@@ -47,7 +47,10 @@ meta <-
     trim_ws = TRUE
   ) |>
   dplyr::mutate(noise_source = factor(noise_source),
-                mapping_extend = factor(mapping_extend))
+                mapping_extend = factor(mapping_extend)) |> 
+  dplyr::mutate(bundesland_code = formatC(bundesland_code,
+                                          width = 2, 
+                                          flag = "0"))
 
 ```
 
@@ -98,6 +101,11 @@ for (i in 1:nrow(meta)) {
       else
         NA_character_)
     #mutate(gemeinde_kennziffer=as.character(gemeinde_kennziffer))
+  ds<-ds%>%
+    mutate(bundesland_code = if ("bundesland_code" %in% names(.))
+      as.character(bundesland_code)
+      else
+        NA_character_)
   cat("Habe ", nrow(ds), " Zeilen gelesen.")
   ds <- ds %>%
     lang_machen() %>%
