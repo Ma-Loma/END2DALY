@@ -206,15 +206,23 @@ allExpo<-read_delim(
 )
 
 data_sf <- allExpo  %>%
-  left_join(gemeinden_enh_data) %>% 
-  filter(bundesland_code==HESSEN_BUNDESLAND_CODE) %>% 
-  group_by(gemeinde_kennziffer,quelle,metrik,kartierungsumfang,datenquelle) %>%
+  left_join(gemeinden_enh_data) %>%
+  filter(bundesland_code == HESSEN_BUNDESLAND_CODE)  %>%
   summarise(
     gemeinde_bezeichnung = first(gemeinde_bezeichnung),
     bevoelkerung = max(bevoelkerung, na.rm = FALSE),
-    belastete = sum(exponierte)
+    belastete = sum(exponierte),
+    .by = c(
+      gemeinde_kennziffer,
+      noise_source,
+      metric,
+      mapping_extend,
+      data_source
+    )
   ) %>%
-  left_join(vg250, by = join_by(gemeinde_kennziffer==AGS),relationship = "many-to-many") %>%
+  left_join(vg250,
+            by = join_by(gemeinde_kennziffer == AGS),
+            relationship = "many-to-many") %>%
   mutate(GEN = coalesce(gemeinde_bezeichnung, GEN))
 ```
 
@@ -222,16 +230,22 @@ data_sf <- allExpo  %>%
 ggplot(data_sf) +
   geom_sf(aes(fill = belastete / bevoelkerung, geometry = geom), color = NA) +
   scale_fill_viridis_c(na.value = "grey90") +
-  facet_grid(cols = vars(quelle, datenquelle),
-             rows = vars(metrik, kartierungsumfang)) +
-  theme_bw()+
+  facet_grid(cols = vars(noise_source, data_source),
+             rows = vars(metric, mapping_extend)) +
+  theme_bw() +
   theme(
-    axis.text.x = element_blank(),  # Werte x-Achse weg
-    axis.text.y = element_blank(),  # Werte y-Achse weg
-    axis.ticks = element_blank(),   # Ticks (Striche) weg
-    axis.title.x = element_blank(), # Titel x-Achse weg
-    axis.title.y = element_blank(),  # Titel y-Achse weg
+    axis.text.x = element_blank(),
+    # Werte x-Achse weg
+    axis.text.y = element_blank(),
+    # Werte y-Achse weg
+    axis.ticks = element_blank(),
+    # Ticks (Striche) weg
+    axis.title.x = element_blank(),
+    # Titel x-Achse weg
+    axis.title.y = element_blank(),
+    # Titel y-Achse weg
     panel.spacing.x = unit(0, "line"),
-    panel.spacing.y = unit(0, "line"))
+    panel.spacing.y = unit(0, "line")
+  )
 
 ```
