@@ -521,7 +521,7 @@ expoTab %>%
 
 ## European exposure data
 
-Similar to the abeovementioned German data, here for the all european exposure data.
+Similar to the abovementioned German data, here for the all European exposure data.
 
 ```{r}
 #| label: write_european_exposure
