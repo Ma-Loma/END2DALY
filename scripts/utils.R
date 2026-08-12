@@ -168,18 +168,21 @@ lang_machen <- function(data) {
 #' data %>% gkz_vereinheitlichen()
 #'
 gkz_vereinheitlichen <- function(data) {
-  
   if (!all(c("gemeinde_kennziffer", "bundesland_code") %in% names(data))) {
     stop("Input must have 'gemeinde_kennziffer' and 'bundesland_code' columns",
          call. = FALSE)
   }
   
-  data %>%
+  data |>
+    # Extract last 6 digits, prepend state code
     mutate(
-      # Extract last 6 digits, prepend state code
-      gemeinde_kennziffer = str_sub(gemeinde_kennziffer,
-                                     start = str_length(gemeinde_kennziffer) - 5) %>%
-                           paste0(bundesland_code, .),
+      gemeinde_kennziffer = replace_when(
+        gemeinde_kennziffer,
+        is.na(bundesland_code) ~ NA,
+        !is.na(gemeinde_kennziffer) ~ str_sub(gemeinde_kennziffer,
+                                              start = str_length(gemeinde_kennziffer) - 5) %>%
+          paste0(bundesland_code, .)
+      ),
       .keep = "all"
     )
 }
