@@ -326,7 +326,7 @@ resEEA_all %>%
     x = "outcome",
     y = "Attributable burden [DALY/year]"
   ) +
-    facet_grid(cols = vars(noise_source),
+    facet_grid(cols = vars(noise_source,data_source),
                rows = vars(mapping_extend,agglomeration))+
   guides(fill = guide_legend(title = "Bundesland"))+
  # scale_y_continuous(breaks = NULL)+
