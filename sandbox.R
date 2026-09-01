@@ -71,3 +71,22 @@ ger_data |>
                     agglomeration,
                     mapping_extend,
                     noise_source))
+
+
+haind <- function (Lden) {
+  1 - pnorm((72 - (-126.52 + Lden * 2.49)) / sqrt(2054.43))
+}
+
+
+data.frame(Lden=seq(40,75,1)) |> 
+  mutate(HA=haind(Lden)) |> 
+  ggplot(aes(x=Lden,y=HA))+
+  geom_point()+geom_line()
+
+hsdind <- function(lnight) {
+  1-pnorm((72-(-90.70+(lnight)*(1.80)))/sqrt(1789+272))  
+}
+data.frame(lnight=seq(40,75,1)) |> 
+  mutate(HSD=hsdind(lnight)) |> 
+  ggplot(aes(x=lnight,y=HSD))+
+  geom_point()+geom_line()
