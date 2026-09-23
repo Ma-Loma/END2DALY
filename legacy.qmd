@@ -1,0 +1,58 @@
+```{r function_all_ar_res}
+
+all_ar_res <- function(dat)
+{
+  outc_sourc_metr_liste <- dat %>%
+    filter(risk_type == "absolute_risk") %>%
+    select(outcome, source, metric, bhd) %>%
+    unique()
+  
+  print("hier wird diese Outcome-Liste berücksichtigt:")
+  print(outc_sourc_metr_liste)
+  outcome_ar <- NULL
+  
+  # Basic for loop iteration
+  for (i in 1:nrow(outc_sourc_metr_liste)) {
+    zeile <- outc_sourc_metr_liste[i, ]
+    print("Nun Kombi:")
+    print(zeile)
+    osm <- dat %>%
+      filter(outcome == zeile$outcome,
+             source == zeile$source,
+             metric == zeile$metric)
+    outcome_ar <-
+      calc_macro_ar_impact(osm) %>%
+      rbind(outcome_ar)# Assuming this function returns a data frame
+  }
+  return(outcome_ar)
+}
+
+all_rr_res <- function(dat)
+{
+  outc_sourc_metr_liste <- dat %>%
+    filter(risk_type == "relative_risk") %>%
+    filter(!is.na(bhd)) %>% #bhd is needed in calc_macro_rr_impact; better error handling would be nice: throw warning, return line with NA in certain datafield and continue
+    select(outcome, source, metric, bhd) %>%
+    unique()
+  
+  print("hier wird diese Outcome-Liste berücksichtigt:")
+  print(outc_sourc_metr_liste)
+  outcome_rr <- NULL
+  
+  # Basic for loop iteration
+  for (i in 1:nrow(outc_sourc_metr_liste)) {
+    zeile <- outc_sourc_metr_liste[i, ]
+    print("Nun Kombi:")
+    print(zeile)
+    osm <- dat %>%
+      filter(outcome == zeile$outcome,
+             source == zeile$source,
+             metric == zeile$metric)
+    outcome_rr <-
+      calc_macro_rr_impact(osm) %>%
+      rbind(outcome_rr)# Assuming this function returns a data frame
+  }
+  return(outcome_rr)
+}
+
+```

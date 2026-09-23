@@ -2,12 +2,14 @@
 title: "Krankheitslast durch Umgebungslärm in Deutschland"
 author: "Matthias Lochmann"
 format: pptx
+bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
 # Bibliotheken laden
 rm(list = ls())
-.libPaths("M:/R/library-4.6")
+.libPaths("C:/Users/lochmannm/Documents/R/library-4.6.1")
+#.libPaths("M:/R/library-4.6")
 #falls aktuellster healthiar gewünscht; diese Lade-Methode funkioniert u.U. nicht auf allen Rechnern
 # library(remotes)
 # remotes::install_github(repo = "SwissTPH/healthiar", build_vignettes = TRUE)
@@ -20,14 +22,26 @@ library(purrr)
 
 ```{r}
 #| label: load_shared_util_fkt
-source("scripts/utils.R")
 source("scripts/config.R")
+source("scripts/utils.R")
 dir.create("plots", showWarnings = F)
 ```
 
 ## Einführung
 
-Dieses Dokument analysiert die Lärmbelastung in Hessen und berechnet die damit verbundenen Gesundheitsauswirkungen. Die Analyse basiert auf Daten des HLNUG und ETCHE-Funktionen.
+Dieses Dokument analysiert die Lärmbelastung in Hessen und berechnet die damit verbundenen Gesundheitsauswirkungen. Die Analyse basiert auf Lärmexpositionsdaten
+
+- hessischen Daten des HLNUG
+
+- Landesdaten anderer Landesämter
+
+- gesamteuropäischen Lärmexpositionsdaten aus EIONET
+
+sowie
+
+- Expositions-Wirkungsfunktionen sowie "Baseline-health data" aus [@engelmann2025a] und [@engelmann2025]
+
+- 
 
 ## Daten laden und vorbereiten
 
@@ -35,18 +49,48 @@ ETCHE-, HLNUG- sowie Destatis Daten laden.
 
 ```{r load-data}
 # ETCHE Input laden
-functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx") %>%
+threshold_list <- read_excel("data/thresholds.xlsx")
+DW_list <- read_excel("data/DW_list.xlsx")
+
+
+functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx",range = cell_cols("A:K")) |> 
+  left_join(DW_list,
+            by=join_by(outcome)) |> 
+  left_join(threshold_list,
+            by = join_by(outcome, noise_source, metric)) |> 
   mutate(
     ERF = str_replace_all(ERF, "threshold", as.character(threshold)),
     DW = as.numeric(DW)
-  )
+  ) |>
+  filter(ETCHE23_model==1|END_model == 1)
 
-baselineETCHE <-read_delim(
+baselineETCHE <- read_delim(
   "data/ETCHE/table_10_1.csv",
   delim = ";",
   escape_double = FALSE,
   trim_ws = TRUE
-)
+) |>
+  pivot_longer(-iso_code,
+               names_sep = "_",
+               names_to = c("outcome", "baseline_unit"),
+               values_to = "bhd")
+
+baselineETCHE24 <- read_delim(
+  "data/ETCHE24/table_10_2.csv",
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+) |>
+  pivot_longer(
+    -iso_code,
+    names_sep = "_",
+    names_to = c("outcome", "agegroup"),
+    values_to = "bhd"
+  ) |>
+  summarise(bhd = mean(bhd), .by = c(iso_code, outcome)) |>
+  summarise(bhd = mean(bhd), .by = c(iso_code)) |>
+  mutate(baseline_unit = "YLD",
+         outcome="Behavioural problems")
 
 # Gemeinde- und Kreisnamen laden
 gemeinden_daten <- read_delim(
@@ -56,6 +100,10 @@ gemeinden_daten <- read_delim(
   trim_ws = TRUE
 )
 
+baselineETCHE<-
+  baselineETCHE|>
+  bind_rows(baselineETCHE24)
+
 allExpo <- read_delim(
   PATH_ALLEXPO_DATA,
   delim = ";",
@@ -63,7 +111,21 @@ allExpo <- read_delim(
   trim_ws = TRUE
 )
 
+eurExpo <- read_delim(
+  PATH_EUREXPO_DATA,
+  delim = ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)|>
+  filter(!is.na(name_stadt_gemeinde))
 
+meta_EEA<- read_delim(PATH_METADATA_EEA_DE,
+                       col_types = cols(.default = "c"),
+                       delim = ";")
+
+data_country_fs_EEA <-
+  read.delim(paste0(PATH_EXPO_OUTPUT,"EEA_country_fs_ger.csv"),
+             sep = ";")
 
 ```
 
@@ -73,22 +135,32 @@ In @fig-plotERFs all ERFs are on display.
 #| label: fig-plotERFs
 #| fig-cap: "Overview of all imported ERF."
 functionsETCHE |>
+  mutate(function_label=paste0(outcome,", ",risk_type)) |>
   # mutate(id = row_number()) |>
   mutate(data = map(ERF, \(formel)
                     tibble(
-                      c = 35:85, y = sapply(35:85, \(c) eval(parse(text = formel)))
+                      c = 40:80, y = sapply(40:80, \(c) eval(parse(text = formel)))
                     ))) |>
   unnest(data) |>
-  ggplot(aes(c, y)) +
-  geom_line(aes(linetype = metric, color = risk_type)) +
-  facet_grid(
-    cols = vars(source),
-    rows = vars(outcome),
-    labeller = labeller(outcome = label_wrap_gen(width = 10))
-  )
+  ggplot(aes(c, y,linetype = threshold_name)) +
+  geom_line(aes(color = noise_source)) +
+  geom_vline(aes(xintercept = threshold)) +
+  facet_wrap(vars(function_label),
+    labeller = labeller(function_label = label_wrap_gen(width = 10))
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "LDEN or Lnight [dB(A)]",
+    y = "HA, HSD or relative risk",
+    caption = "All exposure-response functions in use.
+       The vertical lines indicate the respective level-cutoff/ thresholds."
+  ) +
+  guides(color = guide_legend(title = "Risk type"),
+         linetype = guide_legend(title = "Threshold name"))+
+  theme(strip.clip = "on")
 ggsave("plots/all_ERFs.png")
-```
 
+```
 
 ## Expositions- und Gemeindedaten zusammenführen
 
@@ -98,6 +170,7 @@ Hier gibts eine breite Tabelle, sollte später noch mehr Richtung saubere Datenb
 
 allExpo_w <- allExpo %>%
   left_join(gemeinden_daten, by = join_by("gemeinde_kennziffer"))
+
 ```
 
 ## Expositionsdaten und ERF-Funktionen zusammenführen
@@ -107,21 +180,24 @@ Um die Umweltbedingte Krankheitslast zu berechnen, braucht healthiar ein datafra
 ```{r merge-exposure-erf}
 dat_exp_ERF <- allExpo_w %>%
   mutate(
-    source =
+    noise_source =
       replace_values(
-        quelle,
+        noise_source,
         "Straße" ~ "road",
         "Flug" ~ "air",
         "Industrie" ~ "industry",
         "Schiene" ~ "rail"
       ),
-    metric = metrik,
     .keep = "unused"
   ) %>%
   left_join(functionsETCHE,
-            by = join_by(source, metric),
+            by = join_by(noise_source, metric),
             relationship = "many-to-many") %>%
-  mutate(threshold = replace_na(threshold, 0))
+  mutate(threshold = replace_na(threshold, 0)) |>
+  left_join(baselineETCHE|>
+              filter(str_starts(baseline_unit,"Y")),
+            by = join_by(iso_code, outcome))
+  
 ```
 
 Die zusammengeführten Daten haben diese Statistik:
@@ -131,87 +207,100 @@ Die zusammengeführten Daten haben diese Statistik:
 dat_exp_ERF %>% 
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
-            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>% 
-  knitr::kable()
+            bhd=first(bhd),
+            .by=c(noise_source,data_source,mapping_extend,outcome,population_type,threshold_name)) %>%
+  knitr::kable(format="simple")
 ```
 
 ## Altergruppen verwenden
+
 Da offensichtlich für die verschiedenen Endpunkte nur jeweils für eine Sub-Population ("children" vs. "adults") gelten sollen, werden hier entsprechend sowohl die Bevölkerungs- als auch die Belastetenzahlen mithilfe der Alters-Fraktionen der jeweiligen Gemeinde berechnet. Dieses Vorgehen muss noch kritisch hinterfragt werden! So wäre zu klären, ob nicht zumindest manche Endpunkte auch eine größere Bevölkerung in Risiko setzen.
 
 ```{r}
 #| label: adjust_age_fractions
-dat_exp_ERF %>% 
-  multiply_with_age_fraction(.) %>% 
+dat_exp_ERF <-
+  dat_exp_ERF |>  
+  multiply_with_age_fraction()
+
+dat_exp_ERF |>  
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
-            .by=c(source,datenquelle,kartierungsumfang,outcome,population_type)) %>% 
-  knitr::kable()
+            .by=c(noise_source,data_source,mapping_extend,outcome,population_type)) %>% 
+  knitr::kable(format="simple")
 ```
 
 ## Gesundheitsauswirkungen für verschiedene Lärmquellen berechnen
 
-Hier beispielhaft für einige Gesundheitsauswirkungen, zunächst die für "absolutes Risiko": HA, HSD, Leseverständnis.
-
-```{r function_all_ar_res}
-
-all_ar_res <- function(dat) {
-  outc_sourc_metr_liste <- dat %>%
-    filter(risk_type == "absolute_risk") %>%
-    select(outcome, source, metric) %>%
-    unique()
-  
-  print("hier wird diese Outcome-Liste berücksichtigt:")
-  print(outc_sourc_metr_liste)
-  outcome_all <- NULL
-  
-  # Basic for loop iteration
-  for (i in 1:nrow(outc_sourc_metr_liste)) {
-    zeile <- outc_sourc_metr_liste[i, ]
-    print("Nun Kombi:")
-    print(zeile)
-    outcome_all<-dat %>%
-      filter(outcome == zeile$outcome,
-             source == zeile$source,
-             metric == zeile$metric) %>%
-      calc_macro_ar_impact(.) %>%
-      rbind(outcome_all)# Assuming this function returns a data frame
-  }
-  return(outcome_all)
-}
-```
+Here, we filter the overall exposure data to use only the exposure data provided by EEA and calculate then the health impact: all endpoints as absolute risk and all endpoints relative risk. 
 
 
-
-```{r health-impacts-road-air}
+```{r}
+#| label: health-impacts-eea
 
 datEEA_all <- dat_exp_ERF %>%
-  filter(datenquelle == "EEA",
-         kartierungsumfang == "all")
+  filter(data_source == "EEA")
 
-resEEA_all<-datEEA_all %>% 
-  multiply_with_age_fraction() %>% 
-  all_ar_res()
+# Calculate both absolute and relative risk
+resEEA_ar <- datEEA_all %>% 
+  filter(risk_type=="absolute_risk") %>% 
+#  multiply_with_age_fraction() %>% 
+  calc_health_impact(risk_approach = "absolute_risk")
 
-datBundesland_major <- dat_exp_ERF %>%
-  filter(datenquelle == "Bundesland",
-         kartierungsumfang == "major")
+resEEA_rr <- datEEA_all %>% 
+  filter(risk_type=="relative_risk") %>% 
+#  multiply_with_age_fraction() %>% 
+  calc_health_impact(risk_approach = "relative_risk")
 
-resBundesland_major<-all_ar_res(datBundesland_major)
+# combine after typecasting some columns
+resEEA_all <- resEEA_ar |>
+  mutate(prop_pop_exp = as.character(prop_pop_exp)) |>
+  mutate(exp_category = as.character(exp_category)) |>
+  mutate(exp = as.character(exp)) |>
+  bind_rows(resEEA_rr) 
+
 ```
 
-## Visualisierungen
+The same for data provided directly from the Bundesländer; here starting only with those calculating the major sources.
 
+```{r}
+#| label: health-impacts-bundesland
+datBundesland <- dat_exp_ERF %>%
+  filter(data_source == "Bundesland")
+
+resBundesland_ar <- datBundesland %>%
+  filter(risk_type=="absolute_risk") %>% 
+#  multiply_with_age_fraction() %>% 
+  calc_health_impact(risk_approach = "absolute_risk")
+
+resBundesland_rr <- datBundesland %>%
+  filter(risk_type=="relative_risk") %>% 
+  filter(noise_source == "air") %>% 
+#  multiply_with_age_fraction() %>% 
+  calc_health_impact(risk_approach = "relative_risk")
+
+resBundesland_all <- resBundesland_ar |>
+  mutate(prop_pop_exp = as.character(prop_pop_exp)) |>
+  mutate(exp_category = as.character(exp_category)) |>
+  mutate(exp = as.character(exp)) |>
+  bind_rows(resBundesland_rr)
+```
+
+
+## Visualisierungen
 Lärmbelastung in Hessen nach Kreisen
 
 ```{r plot-exposure-hessen}
 allExpo_w %>%
-  mutate(Bundesland_Code=str_sub(gemeinde_kennziffer,1,2)) %>% 
-  filter(Bundesland_Code==HESSEN_BUNDESLAND_CODE) %>% 
+  mutate(bundesland_code=str_sub(gemeinde_kennziffer,1,2)) %>% 
+  filter(bundesland_code==HESSEN_BUNDESLAND_CODE) |> 
+  mutate(agglomeration=str_sub(agglomeration,
+                               start = 1,
+                               end = 10)) |> 
   ggplot(aes(x = l_untergrenze, y = exponierte, fill = kreis_name)) +
   geom_col() +
-  facet_grid(rows=vars(metrik),cols=vars(datenquelle,quelle,kartierungsumfang)) +
+  facet_grid(rows=vars(metric,mapping_extend),cols=vars(data_source,noise_source,agglomeration)) +
   labs(
-    title = "Lärmbelastung in Hessen nach Kreisen, Quelle und Lärmmetrik",
+    title = "Lärmbelastung in Hessen nach Kreisen, Lärmquelle und Lärmmetrik",
     x = "Lärmpegel in dB",
     y = "Anzahl exponierter Personen"
   ) +
@@ -223,7 +312,7 @@ ggsave("plots/exposition_hessen.png", width = 12, height = 8)
 ## Gesundheitsauswirkungen in Regionen
 
 ```{r}
-#| label: fig-ballubgsraeume
+#| label: fig-ballungsraeume
 #| figure-caption: "Zu beachten ist der ungeklärte Umgang mit den Altersgruppen"
 bundesland_daten <- read_delim(
   PATH_BUNDESLAND_DATA,
@@ -239,20 +328,27 @@ resEEA_all %>%
   ggplot(aes(x = outcome, fill = bundesland_name, y = impact)) +
   geom_col() +
   # facet_grid(rows = vars(metric, outcome),
-  #            cols = vars(kartierungsumfang)) +
+  #            cols = vars(mapping_extend)) +
+  # labs(
+  #   title = "Lärmbedingte Krankheitslast errechnet aus \nULR-Belastetenzahlen in den Ballungsräumen",
+  #   x = "Endpunkt",
+  #   y = "Attributable Krankheitslast [DALY]"
+  # ) +
   labs(
-    title = "Lärm-bedingte Krankheitslast errechnet aus \nULR-Straßenlärmbelastetenzahlen in den Ballungsräumen",
-    x = "Endpunkt",
-    y = "Attributable Krankheitslast [DALY]"
+    title = "Noise attributable burden estimated from\nEND-exposure numbers in German agglomerations.",
+    x = "outcome",
+    y = "Attributable burden [DALY/year]"
   ) +
+    facet_grid(cols = vars(noise_source,data_source),
+               rows = vars(mapping_extend,agglomeration))+
   guides(fill = guide_legend(title = "Bundesland"))+
-  scale_y_continuous(breaks = NULL)+
-    theme_gray(base_size = 15)
+ # scale_y_continuous(breaks = NULL)+
+    theme_gray(base_size = 15)+
+  theme(axis.text.x = element_text(angle = 90))
 
-ggsave("plots/DALY_Eionet_Ballung_all.png", width = 12, height = 8)
+ggsave("plots/DALY_Eionet_Ballung_all_ENG.png", width = 12, height = 8)
 #ggsave("plots/DALY_Bundesländer_major.png", width = 12, height = 8,dpi=200)
 ```
-
 
 ```{r}
 #| label: plotKAGZRM_burden
@@ -276,13 +372,13 @@ kagzrm_kreise <- read_delim(
   mutate(kreis_code=as.character(kreis_code))
 
 res_KAGZRM_gem <-
-  resBundesland_major %>%
+  resBundesland_all %>%
   left_join(gemeinden_daten, by = join_by(geo_id_micro == gemeinde_kennziffer)) %>%
   semi_join(kagzrm_gemeinden, by = join_by(geo_id_micro == gemeinde_kennziffer))
 
 
 res_KAGZRM_kr <-
-  resBundesland_major %>%
+  resBundesland_all %>%
   left_join(gemeinden_daten, by = join_by(geo_id_micro == gemeinde_kennziffer)) %>%
   semi_join(kagzrm_kreise, by = c("bundesland_code", "kreis_code"))
 
@@ -298,16 +394,16 @@ res_KAGZRM %>%
   #guides(fill = guide_legend(title = "Kreis"))+
   #  scale_y_continuous(breaks = NULL)+
   theme_gray(base_size = 15) +
-  facet_grid(rows = vars(source),
-             cols = vars(kartierungsumfang))
+  facet_grid(cols = vars(noise_source),
+             rows = vars(mapping_extend))
 ggsave("plots/allKAGZRM_major.png")
 ```
 
-
 ```{r}
 #| label: alleEEAresult
-resEEA_all %>% 
-  group_by(outcome) %>% 
-  summarize(DALY=sum(impact))
+resEEA_all |> 
+  summarize(DALY=sum(impact,na.rm = TRUE),
+            avg_paf=mean(pop_fraction,na.rm = TRUE),
+            .by=c(noise_source,outcome,agglomeration)) %>% 
+  knitr::kable(format="simple")
 ```
-

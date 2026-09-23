@@ -42,13 +42,13 @@ read_colnames <- function(path) {
 #'   - zeilen_gesamt: max rows to read
 #'   - spaltennamen: path to column names text file
 #'   - geoschluessel_stellen: geocode format
-#'   - datenquelle: data source name (HLNUG, BW, EEA, etc.)
+#'   - data_source: data source name (HLNUG, BW, EEA, etc.)
 #'
 #' @return Tibble with raw exposure data plus metadata columns
 #'
 #' @details
 #' - Applies NA patterns for common missing value codes
-#' - Adds metadata columns: geoschluessel_stellen, datenquelle
+#' - Adds metadata columns: geoschluessel_stellen, data_source
 #' - Stops with informative error if file not found or read fails
 #'
 read_one_dataset <- function(meta_row) {
@@ -77,7 +77,7 @@ read_one_dataset <- function(meta_row) {
     ) %>%
       mutate(
         geoschluessel_stellen = meta_row$geoschluessel_stellen,
-        datenquelle = meta_row$datenquelle,
+        data_source = meta_row$data_source,
         .before = 1
       ),
     error = function(e) {
@@ -97,7 +97,7 @@ read_one_dataset <- function(meta_row) {
 #'
 #' **Output format (long):**
 #' - One row per (municipality × metric × exposure band)
-#' - Columns: gemeinde_kennziffer, metrik, l_untergrenze, l_zentral, exponierte
+#' - Columns: gemeinde_kennziffer, metric, l_untergrenze, l_zentral, exponierte
 #'
 #' @param data Tibble: raw exposure data (wide format)
 #'
@@ -127,21 +127,22 @@ lang_machen <- function(data) {
     # Keep only relevant columns
     select(contains("gemeinde") | 
            contains("belasteter") | 
-           contains("geoschluessel")) %>%
+           contains("geoschluessel")|
+             contains("country")) %>%
     # Remove "_bis_X" suffixes (artifact of Excel wide format)
     setNames(str_replace(names(.), "_bis_[0-9]*", "")) %>%
     # Pivot: exposure bands to rows
     pivot_longer(
       starts_with("anzahl"),
       names_sep = "_ab_",
-      names_to = c("metrik_raw", "l_untergrenze"),
+      names_to = c("metric_raw", "l_untergrenze"),
       values_to = "exponierte"
     ) %>%
     # Clean metric names & calculate central level
     mutate(
       l_untergrenze = as.numeric(l_untergrenze),
       l_zentral = l_untergrenze + 2,
-      metrik = str_remove(metrik_raw, "anzahl_belasteter_") %>%
+      metric = str_remove(metric_raw, "anzahl_belasteter_") %>%
                str_replace_all("l_night", "lnight"),
       .keep = "unused"
     ) %>%
@@ -167,18 +168,21 @@ lang_machen <- function(data) {
 #' data %>% gkz_vereinheitlichen()
 #'
 gkz_vereinheitlichen <- function(data) {
-  
   if (!all(c("gemeinde_kennziffer", "bundesland_code") %in% names(data))) {
     stop("Input must have 'gemeinde_kennziffer' and 'bundesland_code' columns",
          call. = FALSE)
   }
   
-  data %>%
+  data |>
+    # Extract last 6 digits, prepend state code
     mutate(
-      # Extract last 6 digits, prepend state code
-      gemeinde_kennziffer = str_sub(gemeinde_kennziffer,
-                                     start = str_length(gemeinde_kennziffer) - 5) %>%
-                           paste0(bundesland_code, .),
+      gemeinde_kennziffer = replace_when(
+        gemeinde_kennziffer,
+        is.na(bundesland_code) ~ NA,
+        !is.na(gemeinde_kennziffer) ~ str_sub(gemeinde_kennziffer,
+                                              start = str_length(gemeinde_kennziffer) - 5) %>%
+          paste0(bundesland_code, .)
+      ),
       .keep = "all"
     )
 }
@@ -212,7 +216,7 @@ validate_exposure_data <- function(data) {
   
   # Check metric names
   expected_metrics <- c("lden", "lnight")
-  unexpected <- setdiff(unique(data$metrik), expected_metrics)
+  unexpected <- setdiff(unique(data$metric), expected_metrics)
   if (length(unexpected) > 0) {
     warning("Unexpected metrics: ", paste(unexpected, collapse = ", "), 
             immediate. = TRUE)
@@ -222,8 +226,8 @@ validate_exposure_data <- function(data) {
   cat("\nExposure summary:\n")
   cat("  Total rows:", nrow(data), "\n")
   cat("  Unique municipalities:", n_distinct(data$gemeinde_kennziffer), "\n")
-  cat("  Metrics:", paste(unique(data$metrik), collapse = ", "), "\n")
-  cat("  Sources:", paste(unique(data$datenquelle), collapse = ", "), "\n")
+  cat("  Metrics:", paste(unique(data$metric), collapse = ", "), "\n")
+  cat("  Sources:", paste(unique(data$data_source), collapse = ", "), "\n")
   cat("  Total exposed:", sum(data$exponierte, na.rm = TRUE), "persons\n\n")
   
   invisible(data)
@@ -344,63 +348,298 @@ multiply_with_age_fraction <- function(dat){
     )
 }
 
+#' Helper function to check 
+#'
+#' @param dat 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+check_exp_single_erf_exp <- function(dat) {
+  rt_thr_ERF_df <- dat %>%
+    select(risk_type, threshold, ERF) %>%
+    unique()
+  
+  ifelse(nrow(rt_thr_ERF_df) > 1, stop(
+    "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single ERF function!",
+    rt_thr_ERF_df
+  ), NA)
+  lzentr_gembez_df <- dat %>%
+    summarise(n = n(),
+              .by = c(gemeinde_kennziffer,
+                      l_zentral,
+                      noise_source))
+  ifelse(lzentr_gembez_df$n %>%
+           max(.) > 1, stop(
+             "Function calc_macro_ar_impact and calc_macro_rr_impact expect a data frame with a single exposure scenario!",
+             lzentr_gembez_df %>% filter(n > 1)
+           ), NA)
+}
 
 #' Calculate impact of absolute risk endpoints
 #'
-#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,Bundesland_Code,DW
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte,l_zentral,threshold,gemeinde_kennziffer,bundesland_code,DW
 #'
 #' @returns a dataframe with detailed infos of input and outcome
 #' @export
 #'
-#' @details check data (single exposure scenario and single ERF)
-#' then pass it to healthiar::attribute_health.
-#' The information of source,metric,outcome,datenquelle,kartierungsumfang is piped through using the info field.
+#' @details checks data (single exposure scenario and single ERF)
+#' then passes it to healthiar::attribute_health.
+#' The information of noise_source,metric,outcome,data_source,mapping_extend is piped through using the info field.
 #' 
 #' @examples
 calc_macro_ar_impact <- function(dat) {
-  rt_thr_ERF_df<-dat %>%
-    select(risk_type, threshold, ERF) %>%
-    unique()
+  check_exp_single_erf_exp(dat)
   
-  ifelse(nrow(rt_thr_ERF_df) > 1,
-         stop(
-           "Function calc_macro_ar_impact expects a data frame with a single ERF function!",
-           rt_thr_ERF_df
-         ),
-         NA)
-  lzentr_gembez_df<-dat %>%
-    group_by(gemeinde_kennziffer,l_zentral,source) %>%
-    summarise(n=n())
-  ifelse( lzentr_gembez_df$n %>% 
-            max(.) > 1,
-          stop(
-            "Function calc_macro_ar_impact expects a data frame with a single exposure scenario!",
-            lzentr_gembez_df %>% filter(n>1)
-          ),
-          NA)
   dat %>%
     {
       healthiar::attribute_health(
         approach_risk = "absolute_risk",
         pop_exp = .$exponierte,
         exp_central = .$l_zentral,
-        cutoff_central = first(.$threshold),
-        erf_eq_central = first(.$ERF),
+        erf_eq_central = paste0(first(.$ERF), "*100"),
         geo_id_micro = .$gemeinde_kennziffer,
-        geo_id_macro = .$Bundesland_Code,
+        geo_id_macro = .$bundesland_code,
         dw_central = .$DW,
         duration_central = 1,
-        info = select(.,source,metric,outcome,datenquelle,kartierungsumfang)
+        info = select(
+          .,
+          noise_source,
+          metric,
+          outcome,
+          data_source,
+          mapping_extend,
+          agglomeration,
+          threshold_name
+        )
       )
     } %>%
     .$health_detailed %>%
     .$results_raw %>%
     mutate(
-      source = info_column_1,
+      noise_source = info_column_1,
       metric = info_column_2,
       outcome = info_column_3,
-      datenquelle = info_column_4,
-      kartierungsumfang=info_column_5,
-      .keep="unused"
+      data_source = info_column_4,
+      mapping_extend = info_column_5,
+      agglomeration = info_column_6,
+      threshold_name = info_column_7,
+      .keep = "unused"
     )
+}
+
+
+#' Calculate impact of relative risk endpoints
+#'
+#' @param dat a dataframe with risk_type, threshold, ERF, exponierte, l_zentral, gemeinde_kennziffer, bundesland_code, DW
+#'
+#' @return a dataframe with detailed infos of input and outcome
+#' @export
+#'
+#' @details Similar to calc_macro_ar_impact but for relative_risk approach.
+#' Passes metadata through the info field.
+#'
+calc_macro_rr_impact <- function(dat) {
+  rt_thr_ERF_df <- dat %>%
+    select(risk_type, threshold, ERF) %>%
+    unique()
+  
+  if (nrow(rt_thr_ERF_df) > 1) {
+    stop("Function calc_macro_rr_impact expects a data frame with a single ERF function!")
+  }
+  
+  lzentr_gembez_df <- dat %>%
+    group_by(gemeinde_kennziffer, l_zentral, noise_source) %>%
+    summarise(n = n(), .groups = "drop")
+  
+  if (max(lzentr_gembez_df$n) > 1) {
+    stop(
+      "Function calc_macro_rr_impact expects a data frame with a single exposure scenario!"
+    )
+  }
+  
+  dat %>%
+    mutate(bevoelkerung = if_else(bevoelkerung == 0, 0.001, bevoelkerung)) %>% #to avoid div/0
+    {
+      healthiar::attribute_health(
+        approach_risk = "relative_risk",
+        bhd_central = first(.$bhd) * .$bevoelkerung,
+        prop_pop_exp = .$exponierte / .$bevoelkerung,
+        #pop_exp = 1,
+        exp_central = .$l_zentral,
+        cutoff_central = 0,
+        #as for "relative_risk" this also shifts the ERF
+        erf_eq_central = first(.$ERF),
+        geo_id_micro = .$gemeinde_kennziffer,
+        geo_id_macro = .$bundesland_code,
+        duration_central = 1,
+        info = select(
+          .,
+          noise_source,
+          metric,
+          outcome,
+          data_source,
+          mapping_extend,
+          agglomeration,
+          threshold_name
+        )
+      )
+    } %>%
+    .$health_detailed %>%
+    .$results_raw %>%
+    mutate(
+      noise_source = info_column_1,
+      metric = info_column_2,
+      outcome = info_column_3,
+      data_source = info_column_4,
+      mapping_extend = info_column_5,
+      agglomeration = info_column_6,
+      threshold_name = info_column_7,
+      .keep = "unused"
+    )
+}
+
+#' Check data list and stop if NA in grouping column
+#'
+#' @returns nothing, but stops if not fails
+#' @export
+#'
+#' @examples
+stop_if_na_in_grouping <- function (df){
+  # 1. Check for NA values in grouping columns
+  na_rows <- df[rowSums(is.na(df[GROUP_COLS])) > 0, ]
+  
+  # 2. Halt execution and print summary if NA rows exist
+  if (nrow(na_rows) > 0) {
+    print("Summary of rows with missing grouping data:")
+    na_rows |> 
+      dplyr::select(dplyr::any_of("gemeinde_kennziffer"), dplyr::all_of(GROUP_COLS)) |> 
+      print()
+    
+    stop("Execution stopped: Found ", nrow(na_rows), " rows with NA in the grouping columns!")
+  }
+  
+}
+
+#' Calculate health impact for any risk approach
+#'
+#' @param dat data frame with exposure and ERF data
+#' @param risk_approach Character: "absolute_risk" or "relative_risk"
+#'
+#' @return data frame with health impact results
+#' @export
+#'
+#' @examples
+#' calc_health_impact(dat, risk_approach = "absolute_risk")
+#'
+calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
+  # Validate risk_approach
+  if (!risk_approach %in% c("absolute_risk", "relative_risk")) {
+    stop("risk_approach must be 'absolute_risk' or 'relative_risk'",
+         call. = FALSE)
+  }
+  
+  stop_if_na_in_grouping(dat)
+  
+  outc_sourc_metr_liste <- dat %>%
+    filter(risk_type == risk_approach) %>%
+    select(noise_source,
+           metric,
+           outcome,
+           data_source,
+           mapping_extend,
+           agglomeration,
+           threshold_name) %>%
+    unique()
+  
+  if (nrow(outc_sourc_metr_liste) == 0) {
+    warning("No combinations found for risk_approach = '",
+            risk_approach,
+            "'")
+    return(NULL)
+  }
+  
+  outcome_all <- NULL
+  
+  for (i in 1:nrow(outc_sourc_metr_liste)) {
+    zeile <- outc_sourc_metr_liste[i, ]
+    print(zeile)
+    dat_subset <- dat %>%
+      filter(
+        outcome == zeile$outcome,
+        noise_source == zeile$noise_source,
+        metric == zeile$metric,
+        data_source == zeile$data_source,
+        mapping_extend == zeile$mapping_extend,
+        agglomeration == zeile$agglomeration,
+        threshold_name == zeile$threshold_name
+      )
+    
+    dat_subset |>
+      summarise(
+        n = n(),
+        expon = sum(exponierte),
+        .by = all_of(GROUP_COLS)
+      ) |>
+      print()
+    
+    # Call appropriate calc function based on risk_approach
+    if (risk_approach == "absolute_risk") {
+      outcome_all <- bind_rows(outcome_all, calc_macro_ar_impact(dat_subset))
+    }
+    else if (any(is.na(dat_subset$bhd))) {
+      warning(
+        zeile$outcome,
+        zeile$noise_source,
+        zeile$metric,
+        " skipped, as at least one bhd is NA: ",
+        paste(unique(dat_subset$bhd), collapse = ", ")
+      )
+    }
+    else if (risk_approach == "relative_risk") {
+      outcome_all <- bind_rows(outcome_all, calc_macro_rr_impact(dat_subset))
+    }
+  }
+  
+  return(outcome_all)
+}
+
+
+#' Standardize health impact output format
+#'
+#' Ensures consistent data structure across absolute_risk and relative_risk results.
+#'
+#' @param result_list A list of data frames from calc_macro_*_impact functions
+#'
+#' @return A unified data frame with consistent columns
+#' @export
+#'
+#' @details
+#' The healthiar package returns different column structures for absolute vs relative risk.
+#' This function ensures both approaches return the same columns (selecting common ones).
+#'
+standardize_health_results <- function(result_list) {
+  # Get common columns across all results
+  common_cols <- Reduce(intersect, lapply(result_list, names))
+  
+  result_list %>%
+    map_df(~ select(., all_of(common_cols))) %>%
+    return()
+}
+
+
+#' Translate names of communities from English to German 
+#'
+#' @param name a chr or column of chr with names of German communities written in english style
+#'
+#' @returns a chr or column of chr with names of German communities translated to German languae
+#' @export
+#'
+#' @examples
+translate_community_names_en_ger <- function(name){
+  out=str_replace_all(name,LETTER_REPLACEMENTS_EN_GER) |>
+    str_replace_all(TRANSLATIONS_EN_GER) |>
+    str_replace_all("Mörs","Moers")
+  return(out)
 }

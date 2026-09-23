@@ -1,4 +1,4 @@
-.libPaths("M:/R/library-4.6")
+.libPaths("C:/Users/lochmannm/Documents/R/library-4.6.1")
 packagelist <- c(
 #  "arrow", 
 #  "dbplyr",
@@ -14,6 +14,9 @@ packagelist <- c(
   "remotes",
   "terra",
   "sf",
-  "exactextractr"
+  "exactextractr",
+  "healtiar"
 )
-install.packages(packagelist, lib="M:/R/library-4.6")
+install.packages(packagelist, lib="C:/Users/lochmannm/Documents/R/library-4.6.1")
+## In case, you want to develop R-packages
+#install.packages(c("devtools", "roxygen2", "testthat", "knitr"))

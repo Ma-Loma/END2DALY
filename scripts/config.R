@@ -11,9 +11,13 @@ PATH_ETCHE_FUNCTIONS   <- "data/ETCHE/functionsETCHE.xlsx"
 PATH_GV_REFERENCE      <- "data/Gebietstabellen/raw/GV100AD_31122021.txt"#probable reference date of END
 PATH_VG250_GIS         <- "data/Gebietstabellen/raw/DE_VG250EW_31122021.gpkg"
 
+PATH_METADATA_EEA_DE   <- "data/EEA/meta_Health_Impacts_Germany.csv"
+PATH_DATA_EEA_DE       <- "data/EEA/Health_Impacts_Germany.xlsx"
+
 PATH_KREISE_DATA       <- "data/Gebietstabellen/raw/kreise_daten.csv"
 PATH_GEMEINDEN_DATA    <- "data/Gebietstabellen/raw/gemeinden_daten.csv"
 PATH_BUNDESLAND_DATA   <- "data/Gebietstabellen/raw/bundesland_daten.csv"
+PATH_ISO_COUNTRY       <- "data/Gebietstabellen/raw/ico_code_country_12052026.csv"
 
 PATH_KAGZRM_KREISE_DATA<- "data/Gebietstabellen/raw/kagzrm_kreise.txt"
 PATH_KAGZRM_GEMEINDE_DATA<- "data/Gebietstabellen/raw/kagzrm_gemeinden.txt"
@@ -25,11 +29,37 @@ PATH_AREA_OUTPUT       <- "data/Gebietstabellen/processed/"
 
 # Reused data path
 PATH_GEMEINDE_KREIS_DATA<-paste0(PATH_AREA_OUTPUT,"gv_kreis_gemeinden.csv")
-PATH_ALLEXPO_DATA     <-paste0(PATH_EXPO_OUTPUT,"allExpo.csv")
+PATH_ALLEXPO_DATA     <-paste0(PATH_EXPO_OUTPUT,"allGermanMunicipalExpo.csv")
+PATH_EUREXPO_DATA     <-paste0(PATH_EXPO_OUTPUT,"eur_Expo.csv")
+
 # Regional filter
 HESSEN_ONLY            <- TRUE
 HESSEN_BUNDESLAND_CODE <- "06"
 
+# Translations
+LETTER_REPLACEMENTS_EN_GER <-
+  c(
+    "oe" = "ö",
+    "ae" = "ä",
+    "ue" = "ü",
+    "on the Main" = "am Main",
+    "on the Ruhr" = "an der Ruhr"
+  )
+TRANSLATIONS_EN_GER <- c(
+  "Brunswick" = "Braunschweig",
+  "Cologne" = "Köln",
+  "Freiburg" = "Freiburg im Breisgau",
+  "Halle" = "Halle (Saale)",
+  "Hanover" = "Hannover",
+  "Ludwigshafen" = "Ludwigshafen am Rhein",
+  "Munich" = "München",
+  "Nuremberg" = "Nürnberg",
+  "Oldenburg" = "Oldenburg (Oldenburg)"
+)
+
 # Create output directory if needed
 dir.create(PATH_EXPO_OUTPUT, recursive = TRUE, showWarnings = FALSE)
 dir.create(PATH_AREA_OUTPUT, recursive = TRUE, showWarnings = FALSE)
+
+# Common grouping columns
+GROUP_COLS <- c("noise_source", "metric", "outcome", "data_source", "mapping_extend", "agglomeration","threshold_name")
