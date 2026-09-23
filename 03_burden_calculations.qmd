@@ -49,7 +49,15 @@ ETCHE-, HLNUG- sowie Destatis Daten laden.
 
 ```{r load-data}
 # ETCHE Input laden
-functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx") %>%
+threshold_list <- read_excel("data/thresholds.xlsx")
+DW_list <- read_excel("data/DW_list.xlsx")
+
+
+functionsETCHE <- read_excel("data/ETCHE/functionsETCHE.xlsx",range = cell_cols("A:K")) |> 
+  left_join(DW_list,
+            by=join_by(outcome)) |> 
+  left_join(threshold_list,
+            by = join_by(outcome, noise_source, metric)) |> 
   mutate(
     ERF = str_replace_all(ERF, "threshold", as.character(threshold)),
     DW = as.numeric(DW)
@@ -131,11 +139,11 @@ functionsETCHE |>
   # mutate(id = row_number()) |>
   mutate(data = map(ERF, \(formel)
                     tibble(
-                      c = 35:85, y = sapply(35:85, \(c) eval(parse(text = formel)))
+                      c = 40:80, y = sapply(40:80, \(c) eval(parse(text = formel)))
                     ))) |>
   unnest(data) |>
-  ggplot(aes(c, y)) +
-  geom_line(aes(linetype = metric, color = noise_source)) +
+  ggplot(aes(c, y,linetype = threshold_name)) +
+  geom_line(aes(color = noise_source)) +
   geom_vline(aes(xintercept = threshold)) +
   facet_wrap(vars(function_label),
     labeller = labeller(function_label = label_wrap_gen(width = 10))
@@ -145,11 +153,10 @@ functionsETCHE |>
     x = "LDEN or Lnight [dB(A)]",
     y = "HA, HSD or relative risk",
     caption = "All exposure-response functions in use.
-       The vertical lines indicate the respective level-cutoff.
-       Industry is missing, due to misspelling in report."
+       The vertical lines indicate the respective level-cutoff/ thresholds."
   ) +
   guides(color = guide_legend(title = "Risk type"),
-         linetype = guide_legend(title = "Exposure Leq"))+
+         linetype = guide_legend(title = "Threshold name"))+
   theme(strip.clip = "on")
 ggsave("plots/all_ERFs.png")
 
@@ -201,7 +208,7 @@ dat_exp_ERF %>%
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
             bhd=first(bhd),
-            .by=c(noise_source,data_source,mapping_extend,outcome,population_type)) %>%
+            .by=c(noise_source,data_source,mapping_extend,outcome,population_type,threshold_name)) %>%
   knitr::kable(format="simple")
 ```
 
@@ -211,8 +218,11 @@ Da offensichtlich für die verschiedenen Endpunkte nur jeweils für eine Sub-Pop
 
 ```{r}
 #| label: adjust_age_fractions
-dat_exp_ERF %>% 
-  multiply_with_age_fraction(.) %>% 
+dat_exp_ERF <-
+  dat_exp_ERF |>  
+  multiply_with_age_fraction()
+
+dat_exp_ERF |>  
   summarise(AnzBelastetenklassen=n(),
             Belastete=sum(exponierte),
             .by=c(noise_source,data_source,mapping_extend,outcome,population_type)) %>% 
@@ -282,10 +292,13 @@ Lärmbelastung in Hessen nach Kreisen
 ```{r plot-exposure-hessen}
 allExpo_w %>%
   mutate(bundesland_code=str_sub(gemeinde_kennziffer,1,2)) %>% 
-  filter(bundesland_code==HESSEN_BUNDESLAND_CODE) %>% 
+  filter(bundesland_code==HESSEN_BUNDESLAND_CODE) |> 
+  mutate(agglomeration=str_sub(agglomeration,
+                               start = 1,
+                               end = 10)) |> 
   ggplot(aes(x = l_untergrenze, y = exponierte, fill = kreis_name)) +
   geom_col() +
-  facet_grid(rows=vars(metric,agglomeration),cols=vars(data_source,noise_source,mapping_extend)) +
+  facet_grid(rows=vars(metric,mapping_extend),cols=vars(data_source,noise_source,agglomeration)) +
   labs(
     title = "Lärmbelastung in Hessen nach Kreisen, Lärmquelle und Lärmmetrik",
     x = "Lärmpegel in dB",

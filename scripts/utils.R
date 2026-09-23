@@ -390,7 +390,6 @@ check_exp_single_erf_exp <- function(dat) {
 #' 
 #' @examples
 calc_macro_ar_impact <- function(dat) {
-  
   check_exp_single_erf_exp(dat)
   
   dat %>%
@@ -399,12 +398,21 @@ calc_macro_ar_impact <- function(dat) {
         approach_risk = "absolute_risk",
         pop_exp = .$exponierte,
         exp_central = .$l_zentral,
-        erf_eq_central = paste0(first(.$ERF),"*100"),
+        erf_eq_central = paste0(first(.$ERF), "*100"),
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
         dw_central = .$DW,
         duration_central = 1,
-        info = select(.,noise_source,metric,outcome,data_source,mapping_extend,agglomeration)
+        info = select(
+          .,
+          noise_source,
+          metric,
+          outcome,
+          data_source,
+          mapping_extend,
+          agglomeration,
+          threshold_name
+        )
       )
     } %>%
     .$health_detailed %>%
@@ -414,9 +422,10 @@ calc_macro_ar_impact <- function(dat) {
       metric = info_column_2,
       outcome = info_column_3,
       data_source = info_column_4,
-      mapping_extend=info_column_5,
+      mapping_extend = info_column_5,
       agglomeration = info_column_6,
-      .keep="unused"
+      threshold_name = info_column_7,
+      .keep = "unused"
     )
 }
 
@@ -445,24 +454,36 @@ calc_macro_rr_impact <- function(dat) {
     summarise(n = n(), .groups = "drop")
   
   if (max(lzentr_gembez_df$n) > 1) {
-    stop("Function calc_macro_rr_impact expects a data frame with a single exposure scenario!")
+    stop(
+      "Function calc_macro_rr_impact expects a data frame with a single exposure scenario!"
+    )
   }
   
   dat %>%
-    mutate(bevoelkerung=if_else(bevoelkerung==0,0.001,bevoelkerung)) %>% #to avoid div/0
+    mutate(bevoelkerung = if_else(bevoelkerung == 0, 0.001, bevoelkerung)) %>% #to avoid div/0
     {
       healthiar::attribute_health(
         approach_risk = "relative_risk",
         bhd_central = first(.$bhd) * .$bevoelkerung,
-        prop_pop_exp = .$exponierte/.$bevoelkerung,
+        prop_pop_exp = .$exponierte / .$bevoelkerung,
         #pop_exp = 1,
         exp_central = .$l_zentral,
-        cutoff_central = 0,#as for "relative_risk" this also shifts the ERF
+        cutoff_central = 0,
+        #as for "relative_risk" this also shifts the ERF
         erf_eq_central = first(.$ERF),
         geo_id_micro = .$gemeinde_kennziffer,
         geo_id_macro = .$bundesland_code,
         duration_central = 1,
-        info = select(., noise_source, metric, outcome, data_source, mapping_extend,agglomeration)
+        info = select(
+          .,
+          noise_source,
+          metric,
+          outcome,
+          data_source,
+          mapping_extend,
+          agglomeration,
+          threshold_name
+        )
       )
     } %>%
     .$health_detailed %>%
@@ -474,6 +495,7 @@ calc_macro_rr_impact <- function(dat) {
       data_source = info_column_4,
       mapping_extend = info_column_5,
       agglomeration = info_column_6,
+      threshold_name = info_column_7,
       .keep = "unused"
     )
 }
@@ -527,7 +549,8 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
            outcome,
            data_source,
            mapping_extend,
-           agglomeration) %>%
+           agglomeration,
+           threshold_name) %>%
     unique()
   
   if (nrow(outc_sourc_metr_liste) == 0) {
@@ -549,7 +572,8 @@ calc_health_impact <- function(dat, risk_approach = "absolute_risk") {
         metric == zeile$metric,
         data_source == zeile$data_source,
         mapping_extend == zeile$mapping_extend,
-        agglomeration == zeile$agglomeration
+        agglomeration == zeile$agglomeration,
+        threshold_name == zeile$threshold_name
       )
     
     dat_subset |>

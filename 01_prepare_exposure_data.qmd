@@ -356,7 +356,11 @@ Bei den deutschen Daten wird die Gemeindekennziffer auf das 8-stellige Format mi
 ```{r GKZvereinheitlichen}
 ger_data<-data |>
   filter(iso_code == "DE") |>
-  gkz_vereinheitlichen()
+  gkz_vereinheitlichen()|>
+  mutate(location_or_all =
+           if_else(name_stadt_gemeinde == "all",
+                   "all Germany",
+                   "location specific"))
 ```
 
 ### Wiedereinlesen Destatisdaten
@@ -418,9 +422,9 @@ EEArelevantGv <- gv_gemeinden %>%
   mutate(name_stadt_gemeinde = str_squish(name_stadt_gemeinde))
 
 ger_data_EEAMitGKZ <- EEArelevantGv %>%
-  right_join(ger_data_EEA, by = join_by(iso_code,
-                                        name_stadt_gemeinde)) %>%
-  mutate(geoschluessel_stellen = str_length(gemeinde_kennziffer)) %>%
+  right_join(ger_data_EEA, by = join_by(iso_code,name_stadt_gemeinde)) |> 
+  filter(location_or_all == "location specific") |> 
+  mutate(geoschluessel_stellen = str_length(gemeinde_kennziffer)) |> 
   mutate(bundesland_code = str_sub(gemeinde_kennziffer, 1, 2))
 
 ger_data_EEAMitGKZ %>%
@@ -451,7 +455,7 @@ ger_dataOut %>%
          mapping_extend,
          agglomeration,
          data_source) %>% 
-  write_excel_csv2(paste0(PATH_EXPO_OUTPUT,"allExpo.csv"))
+  write_excel_csv2(paste0(PATH_ALLEXPO_DATA))
 
 ```
 

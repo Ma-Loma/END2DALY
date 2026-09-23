@@ -29,7 +29,7 @@ PATH_AREA_OUTPUT       <- "data/Gebietstabellen/processed/"
 
 # Reused data path
 PATH_GEMEINDE_KREIS_DATA<-paste0(PATH_AREA_OUTPUT,"gv_kreis_gemeinden.csv")
-PATH_ALLEXPO_DATA     <-paste0(PATH_EXPO_OUTPUT,"allExpo.csv")
+PATH_ALLEXPO_DATA     <-paste0(PATH_EXPO_OUTPUT,"allGermanMunicipalExpo.csv")
 PATH_EUREXPO_DATA     <-paste0(PATH_EXPO_OUTPUT,"eur_Expo.csv")
 
 # Regional filter
@@ -62,4 +62,4 @@ dir.create(PATH_EXPO_OUTPUT, recursive = TRUE, showWarnings = FALSE)
 dir.create(PATH_AREA_OUTPUT, recursive = TRUE, showWarnings = FALSE)
 
 # Common grouping columns
-GROUP_COLS <- c("noise_source", "metric", "outcome", "data_source", "mapping_extend", "agglomeration")
+GROUP_COLS <- c("noise_source", "metric", "outcome", "data_source", "mapping_extend", "agglomeration","threshold_name")
