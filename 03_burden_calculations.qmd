@@ -388,14 +388,17 @@ res_KAGZRM<-
   unique()
 
 res_KAGZRM %>%
+  filter(mapping_extend == "major sources") |> 
   ggplot(aes(x = outcome, fill = kreis_name , y = impact)) +
   geom_col() +
-  labs(title = "Umgebungslärmbedingte Krankheitslast errechnet aus \nULR-Straßenlärmbelastetenzahlen", x = "Endpunkt", y = "Attributable Krankheitslast [DALY]") +
+  labs(title = "Umgebungslärmbedingte Krankheitslast errechnet aus \nULR-Belastetenzahlen mit großen Quellen", x = "Endpunkt", y = "Attributable Krankheitslast [DALY]") +
   #guides(fill = guide_legend(title = "Kreis"))+
   #  scale_y_continuous(breaks = NULL)+
   theme_gray(base_size = 15) +
+  theme(axis.text.x = element_text(angle = 90))+
   facet_grid(cols = vars(noise_source),
-             rows = vars(mapping_extend))
+             rows = vars(threshold_name),
+             scales = "free_y")
 ggsave("plots/allKAGZRM_major.png")
 ```
 
