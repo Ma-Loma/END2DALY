@@ -1,4 +1,5 @@
-path<-"C:/Users/lochmannm/Documents/R/library-4.6.2"
+#.libPaths("C:/Users/lochmannm/Documents/R/library-4.6.2"
+path<-"C:/Users/User/R/library-4.6.2"
 .libPaths(path)
 packagelist <- c(
   "arrow", 
@@ -15,7 +16,7 @@ packagelist <- c(
   "remotes",
   "terra",
   "sf",
-  "exactextractr",
+  "exactextractr"
  # "healtiar" # not always available for newest R version
 )
 install.packages(packagelist, lib=path)
